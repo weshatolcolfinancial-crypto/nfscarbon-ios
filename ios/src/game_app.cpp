@@ -31,10 +31,6 @@ extern "C" void nfsmw_ios_suspend_paints(bool suspend) __attribute__((weak));
 #include <mach-o/loader.h>
 #include <cstring>
 
-// Optional Carbon / NFSMW patch hooks (weakly linked)
-extern "C" void nfsmw_extra_options_apply() __attribute__((weak));
-extern "C" void nfsmw_render_probe_start() __attribute__((weak));
-
 REXCVAR_DECLARE(bool, ios_gpu_capture);  // ios_main.mm
 REXCVAR_DECLARE(int32_t, ios_fps_cap);    // runtime present pacing
 
@@ -92,13 +88,6 @@ class IosNfsCarbonApp : public NfsCarbonApp {
 
     nfsmw::lifecycle::Install([] { if (nfsmw_ios_suspend_paints) nfsmw_ios_suspend_paints(true); },
                               [] { if (nfsmw_ios_suspend_paints) nfsmw_ios_suspend_paints(false); });
-
-    if (nfsmw_render_probe_start) {
-      nfsmw_render_probe_start();
-    }
-    if (nfsmw_extra_options_apply) {
-      nfsmw_extra_options_apply();
-    }
 
     nfsmw::achievements::Export(nfsmw::launcher::Documents());
 

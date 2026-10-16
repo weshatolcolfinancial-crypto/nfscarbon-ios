@@ -169,8 +169,6 @@ if(NFSCARBON_WITH_GAME)
     # Carbon engine hooks & runtime extensions
     set(NFSCARBON_GAME_SOURCES
         "${CMAKE_CURRENT_SOURCE_DIR}/src/game_app.cpp"
-        "${NFSCARBON_REPO}/src/render_mode_hook.cpp"
-        "${NFSCARBON_REPO}/src/ring_wait_hook.cpp"
         "${NFSCARBON_REPO}/src/dispatch_tolerance.cpp"
         "${NFSCARBON_SDK}/src/ui/rex_app.cpp")
 
