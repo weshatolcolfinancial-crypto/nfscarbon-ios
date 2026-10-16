@@ -48,6 +48,30 @@
 #include "boot_trace.h"
 #include "launcher.h"
 #include "memory_report.h"
+
+#ifndef NFSMW_GAME_LANGUAGE
+#ifdef NFSCARBON_GAME_LANGUAGE
+#define NFSMW_GAME_LANGUAGE NFSCARBON_GAME_LANGUAGE
+#else
+#define NFSMW_GAME_LANGUAGE "1"
+#endif
+#endif
+
+#ifndef NFSMW_GAME_COUNTRY
+#ifdef NFSCARBON_GAME_COUNTRY
+#define NFSMW_GAME_COUNTRY NFSCARBON_GAME_COUNTRY
+#else
+#define NFSMW_GAME_COUNTRY "103"
+#endif
+#endif
+
+#ifndef NFSMW_WITH_GAME
+#ifdef NFSCARBON_WITH_GAME
+#define NFSMW_WITH_GAME NFSCARBON_WITH_GAME
+#else
+#define NFSMW_WITH_GAME 0
+#endif
+#endif
 #include "probe.h"
 
 #if NFSMW_WITH_GAME

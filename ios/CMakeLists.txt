@@ -147,7 +147,12 @@ target_link_libraries(nfscarbon PRIVATE rex::runtime nfscarbon_headers
 
 target_compile_definitions(nfscarbon PRIVATE
     REXGLUE_BUILD_CONFIG="$<CONFIG>"
-    NFSCARBON_WITH_GAME=$<BOOL:${NFSCARBON_WITH_GAME}>)
+    NFSCARBON_WITH_GAME=$<BOOL:${NFSCARBON_WITH_GAME}>
+    NFSMW_WITH_GAME=$<BOOL:${NFSCARBON_WITH_GAME}>
+    NFSMW_GAME_LANGUAGE="1"
+    NFSMW_GAME_COUNTRY="103"
+    NFSCARBON_GAME_LANGUAGE="1"
+    NFSCARBON_GAME_COUNTRY="103")
 
 if(NFSCARBON_WITH_GAME)
     # Carbon engine hooks & runtime extensions
