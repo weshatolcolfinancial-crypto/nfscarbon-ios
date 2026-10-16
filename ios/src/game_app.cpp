@@ -42,6 +42,46 @@ REXCVAR_DEFINE_BOOL(ios_touch_controls, true, "Input",
 REXCVAR_DEFINE_BOOL(ios_show_fps, true, "Display",
                     "iOS: frames per second and ms per frame in the top-left corner");
 
+#if defined(__APPLE__)
+#include <sys/mman.h>
+#endif
+
+// Strong symbol override for sub_82470EA8 to prevent null-dereference crash during CRT _initterm
+extern "C" REX_FUNC(sub_82470EA8) {
+  REX_FUNC_PROLOGUE();
+  ctx.cr6.compare<uint32_t>(ctx.r4.u32, ctx.r5.u32, ctx.xer);
+  if (!ctx.cr6.lt) return;
+  ctx.r11.u64 = ctx.r5.u64 - ctx.r4.u64;
+  ctx.r10.s64 = -1431699456;
+  ctx.r11.s64 = ctx.r11.s64 + -1;
+  ctx.r10.u64 = ctx.r10.u64 | 43691;
+  ctx.r7.s64 = -2100822016;
+  ctx.r11.u64 = (uint64_t(ctx.r11.u32) * uint64_t(ctx.r10.u32)) >> 32;
+  ctx.r9.u64 = REX_LOAD_U32(ctx.r7.u32 + -21496);
+  ctx.r11.u64 = __builtin_rotateleft64(ctx.r11.u32 | (ctx.r11.u64 << 32), 27) & 0x7FFFFFF;
+  ctx.r8.s64 = ctx.r4.s64 + 32;
+  ctx.r6.s64 = ctx.r11.s64 + 1;
+loc_82470ED8:
+  ctx.r11.u64 = REX_LOAD_U32(ctx.r8.u32 + 0);
+  ctx.cr6.compare<uint32_t>(ctx.r11.u32, ctx.r8.u32, ctx.xer);
+  if (ctx.cr6.eq || ctx.r11.u32 == 0) goto loc_82470F00;
+loc_82470EE4:
+  if (ctx.r11.u32 == 0) goto loc_82470F00;
+  ctx.r10.u64 = ctx.r11.u64;
+  ctx.r11.u64 = REX_LOAD_U32(ctx.r11.u32 + 0);
+  ctx.cr6.compare<uint32_t>(ctx.r11.u32, ctx.r8.u32, ctx.xer);
+  REX_STORE_U32(ctx.r10.u32 + 0, ctx.r9.u32);
+  ctx.r9.u64 = ctx.r10.u64;
+  REX_STORE_U32(ctx.r7.u32 + -21496, ctx.r9.u32);
+  if (!ctx.cr6.eq && ctx.r11.u32 != 0) goto loc_82470EE4;
+loc_82470F00:
+  ctx.r6.s64 = ctx.r6.s64 + -1;
+  ctx.r8.s64 = ctx.r8.s64 + 48;
+  ctx.cr6.compare<uint32_t>(ctx.r6.u32, 0, ctx.xer);
+  if (!ctx.cr6.eq) goto loc_82470ED8;
+  return;
+}
+
 class IosNfsCarbonApp : public NfsCarbonApp {
  public:
   using NfsCarbonApp::NfsCarbonApp;
@@ -69,6 +109,20 @@ class IosNfsCarbonApp : public NfsCarbonApp {
           } else {
             REXLOG_INFO("[ios] PreLaunchModule: title=0x{:08X}, entry_point=0x{:08X}",
                         mod->title_id(), ep);
+          }
+        }
+        if (auto* mem = ks->memory()) {
+          uint8_t* base = mem->virtual_membase();
+          if (base) {
+#if defined(__APPLE__)
+            void* ptr = mmap(base, 0x10000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_FIXED, -1, 0);
+            if (ptr != MAP_FAILED) {
+              std::memset(ptr, 0, 0x10000);
+              REXLOG_INFO("[ios] Mapped safe zero page at guest 0x00000000 (host {:p}, size 64KB)", ptr);
+            } else {
+              REXLOG_WARN("[ios] Failed to map safe zero page at {:p}: errno {}", (void*)base, errno);
+            }
+#endif
           }
         }
       }
