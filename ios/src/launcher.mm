@@ -22,6 +22,7 @@
 // Settings live in Documents/settings.json (string values), saved on every
 // change, so they can be read and edited from the Files app too.
 
+#import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
@@ -1336,13 +1337,7 @@ NSString* AchievementSummary(const Achievements& a) {
         } else {
           fs::path dest = docs / "game";
           fs::create_directories(dest, ec);
-          NSFileManager* fm = [NSFileManager defaultManager];
-          NSArray* contents = [fm contentsOfDirectoryAtURL:url includingResourceValuesForKeys:nil options:0 error:nil];
-          for (NSURL* item in contents) {
-            NSURL* dstItem = [NSURL fileURLWithPath:[NSString stringWithUTF8String:(dest / item.lastPathComponent.UTF8String).c_str()]];
-            [fm removeItemAtURL:dstItem error:nil];
-            [fm copyItemAtURL:item toURL:dstItem error:nil];
-          }
+          fs::copy(sourcePath, dest, fs::copy_options::recursive | fs::copy_options::overwrite_existing, ec);
           targetPath = dest;
         }
       } else {
@@ -1356,10 +1351,7 @@ NSString* AchievementSummary(const Achievements& a) {
           fs::path dest = (ext == ".xex") ? (docs / "game" / sourcePath.filename())
                                           : (docs / sourcePath.filename());
           fs::create_directories(dest.parent_path(), ec);
-          NSFileManager* fm = [NSFileManager defaultManager];
-          NSURL* dstUrl = [NSURL fileURLWithPath:[NSString stringWithUTF8String:dest.c_str()]];
-          [fm removeItemAtURL:dstUrl error:nil];
-          [fm copyItemAtURL:url toURL:dstUrl error:nil];
+          fs::copy_file(sourcePath, dest, fs::copy_options::overwrite_existing, ec);
           targetPath = fs::exists(dest, ec) ? dest : sourcePath;
         }
       }
