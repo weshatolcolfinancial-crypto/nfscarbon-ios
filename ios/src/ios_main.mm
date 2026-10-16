@@ -300,6 +300,7 @@ int main(int argc, char* argv[]) {
   SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
   const fs::path docs = DocumentsFolder();
   std::error_code ec;
+  fs::create_directories(docs / "game", ec);
   fs::create_directories(docs / "logs", ec);
   fs::create_directories(docs / "data", ec);
 
@@ -311,27 +312,41 @@ int main(int argc, char* argv[]) {
 #if NFSMW_WITH_GAME
   // The pre-launch screen: settings, the ISO, Play (launcher.mm).
   boot::Trace("launcher: on screen");
-  const fs::path iso = nfsmw::launcher::Run(docs);
+  const fs::path raw_target = nfsmw::launcher::Run(docs);
   boot::Trace("launcher: Play");
 #else
   const auto isos = nfsmw::launcher::FindIsos(docs);
-  const fs::path iso = isos.empty() ? fs::path() : isos.front();
+  const fs::path raw_target = isos.empty() ? fs::path() : isos.front();
 #endif
-  const bool play = NFSMW_WITH_GAME && !iso.empty();
-  if (iso.empty()) {
-    boot::Trace("ISO: none in Documents/");
+
+  fs::path game_target = raw_target;
+  if (!raw_target.empty() && fs::is_directory(raw_target, ec)) {
+    for (const auto& e : fs::directory_iterator(raw_target, ec)) {
+      std::string ext = e.path().extension().string();
+      std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+      if (ext == ".iso") {
+        game_target = e.path();
+        break;
+      }
+    }
+  }
+
+  const bool play = NFSMW_WITH_GAME && !game_target.empty();
+  if (game_target.empty()) {
+    boot::Trace("Game source: none in Documents/ or Documents/game/");
   } else {
     struct stat st{};
-    const bool ok = stat(iso.c_str(), &st) == 0;
-    boot::Trace("ISO: " + iso.filename().string() + ", " +
+    const bool ok = stat(game_target.c_str(), &st) == 0;
+    boot::Trace(std::string("Game source: ") + game_target.filename().string() +
+                (fs::is_directory(game_target, ec) ? " (directory)" : " (ISO file)") + ", " +
                 (ok ? std::to_string(st.st_size) + " bytes" : "stat FAILED"));
   }
   boot::Trace(std::string("mode: ") + (play ? "game" : "probe") +
               (NFSMW_WITH_GAME ? "" : " (this build has no game code)"));
 
-  std::vector<std::string> texts{argc > 0 ? argv[0] : "nfsmw"};
+  std::vector<std::string> texts{argc > 0 ? argv[0] : "nfscarbon"};
   if (play) {
-    const auto game = GameArguments(docs, iso);
+    const auto game = GameArguments(docs, game_target);
     texts.insert(texts.end(), game.begin(), game.end());
     for (const std::string& a : nfsmw::launcher::SettingsArguments(docs)) {
       SetArgument(texts, a);
@@ -344,7 +359,7 @@ int main(int argc, char* argv[]) {
       boot::SetEnabled(false);
     }
   } else {
-    texts.push_back("--log_file=" + (docs / "logs" / "nfsmw.log").string());
+    texts.push_back("--log_file=" + (docs / "logs" / "nfscarbon.log").string());
     texts.push_back("--log_level=info");
   }
   std::vector<char*> args;
@@ -361,9 +376,9 @@ int main(int argc, char* argv[]) {
       // On iOS, returning from main leaves SDL's window up: without this, a
       // failed start is a black screen forever and looks like a hang.
       boot::Trace("game: failed to start");
-      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "NFSMW",
+      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "NFS Carbon",
                                "The game failed to start.\n\nThe reason is in the app's "
-                               "Documents/logs folder (boot.txt and nfsmw.log).",
+                               "Documents/logs folder (boot.txt and nfscarbon.log).",
                                nullptr);
     }
     return result;

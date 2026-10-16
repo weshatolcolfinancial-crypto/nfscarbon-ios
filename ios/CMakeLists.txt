@@ -200,10 +200,10 @@ add_custom_target(nfscarbon_package ALL
             "${CMAKE_CURRENT_SOURCE_DIR}/resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
             "${_app}/AppIcon.png"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_CURRENT_SOURCE_DIR}/resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
+            "${CMAKE_CURRENT_SOURCE_DIR}/resources/Assets.xcassets/AppIcon.appiconset/AppIcon60x60@2x.png"
             "${_app}/AppIcon60x60@2x.png"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_CURRENT_SOURCE_DIR}/resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
+            "${CMAKE_CURRENT_SOURCE_DIR}/resources/Assets.xcassets/AppIcon.appiconset/AppIcon76x76@2x~ipad.png"
             "${_app}/AppIcon76x76@2x~ipad.png"
     COMMAND xattr -cr "${_app}"
     COMMAND codesign --force --sign - --timestamp=none "${_fw}/MoltenVK.framework"

@@ -23,6 +23,7 @@
 // change, so they can be read and edited from the Files app too.
 
 #import <UIKit/UIKit.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 #include <algorithm>
 #include <cctype>
@@ -106,7 +107,7 @@ NSString* AboutText() {
       cmd = reinterpret_cast<const load_command*>(reinterpret_cast<const uint8_t*>(cmd) + cmd->cmdsize);
     }
   }
-  return [NSString stringWithFormat:@"NFSMW Recompiled %@ · build %@", version, build];
+  return [NSString stringWithFormat:@"NFS Carbon Recompiled %@ · build %@", version, build];
 }
 
 bool EmulatorOnly(NSString* key) {
@@ -1212,8 +1213,9 @@ NSString* AchievementSummary(const Achievements& a) {
 }
 @end
 
-@interface NFSLauncherController : UITableViewController <UITextFieldDelegate>
+@interface NFSLauncherController : UITableViewController <UITextFieldDelegate, UIDocumentPickerDelegate>
 - (instancetype)initWithDocuments:(fs::path)docs done:(std::function<void(fs::path)>)done;
+- (void)pickGameSource;
 @end
 
 @implementation NFSLauncherController {
@@ -1232,7 +1234,7 @@ NSString* AchievementSummary(const Achievements& a) {
     _docs = docs;
     _done = std::move(done);
     _settings = LoadSettings(docs);
-    self.title = @"NFSMW Recompiled";
+    self.title = @"NFS Carbon Recompiled";
   }
   return self;
 }
@@ -1242,22 +1244,22 @@ NSString* AchievementSummary(const Achievements& a) {
   self.navigationItem.rightBarButtonItem =
       [[UIBarButtonItem alloc] initWithTitle:@"Play"
                                        style:UIBarButtonItemStyleDone
-                                      target:self
-                                      action:@selector(play)];
+                                       target:self
+                                       action:@selector(play)];
   self.navigationItem.leftBarButtonItem =
       [[UIBarButtonItem alloc] initWithTitle:@"Reset"
                                        style:UIBarButtonItemStylePlain
-                                      target:self
-                                      action:@selector(confirmReset)];
+                                       target:self
+                                       action:@selector(confirmReset)];
   self.tableView.keyboardDismissMode = UIScrollViewKeyboardDismissModeOnDrag;
   // The tabs.
   UISegmentedControl* tabs = [[UISegmentedControl alloc] initWithItems:TabTitles()];
-  _tab = [NSUserDefaults.standardUserDefaults integerForKey:@"nfsmw.launcher.tab"];
+  _tab = [NSUserDefaults.standardUserDefaults integerForKey:@"nfscarbon.launcher.tab"];
   if (_tab < 0 || _tab >= kTabCount) _tab = kTabGame;
   tabs.selectedSegmentIndex = _tab;
   [tabs addAction:[UIAction actionWithHandler:^(UIAction*) {
           self->_tab = tabs.selectedSegmentIndex;
-          [NSUserDefaults.standardUserDefaults setInteger:self->_tab forKey:@"nfsmw.launcher.tab"];
+          [NSUserDefaults.standardUserDefaults setInteger:self->_tab forKey:@"nfscarbon.launcher.tab"];
           [self reloadTab];
         }]
       forControlEvents:UIControlEventValueChanged];
@@ -1282,11 +1284,103 @@ NSString* AchievementSummary(const Achievements& a) {
   _savesAttention = nfsmw::saves::AutoSync(_docs);
   [self reloadTab];
   [self rescan];
-  // Back from the Files app (an ISO copied in): look again.
+  // Back from the Files app (an ISO or folder copied in): look again.
   [NSNotificationCenter.defaultCenter addObserver:self
                                          selector:@selector(rescan)
                                              name:UIApplicationDidBecomeActiveNotification
                                            object:nil];
+}
+
+- (void)pickGameSource {
+  NSMutableArray<UTType*>* types = [NSMutableArray arrayWithObject:UTTypeFolder];
+  [types addObject:UTTypeItem];
+  [types addObject:UTTypeData];
+  UTType* isoType = [UTType typeWithFilenameExtension:@"iso"];
+  if (isoType) [types addObject:isoType];
+  UTType* xexType = [UTType typeWithFilenameExtension:@"xex"];
+  if (xexType) [types addObject:xexType];
+
+  UIDocumentPickerViewController* picker =
+      [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:types asCopy:NO];
+  picker.delegate = self;
+  picker.allowsMultipleSelection = NO;
+  [self presentViewController:picker animated:YES completion:nil];
+}
+
+- (void)documentPicker:(UIDocumentPickerViewController*)picker didPickDocumentsAtURLs:(NSArray<NSURL*>*)urls {
+  NSURL* url = urls.firstObject;
+  if (!url) return;
+
+  const BOOL securityAccess = [url startAccessingSecurityScopedResource];
+
+  NSNumber* isDir = nil;
+  [url getResourceValue:&isDir forKey:NSURLIsDirectoryKey error:nil];
+
+  fs::path docs = self->_docs;
+  fs::path sourcePath(url.path.UTF8String);
+
+  UIAlertController* progress =
+      [UIAlertController alertControllerWithTitle:@"Loading Game..."
+                                          message:@"Processing selected game source..."
+                                   preferredStyle:UIAlertControllerStyleAlert];
+  [self presentViewController:progress animated:YES completion:^{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+      std::error_code ec;
+      fs::path targetPath;
+
+      if ([isDir boolValue]) {
+        std::string srcStr = sourcePath.string();
+        std::string docsStr = docs.string();
+        if (srcStr.rfind(docsStr, 0) == 0) {
+          targetPath = sourcePath;
+        } else {
+          fs::path dest = docs / "game";
+          fs::create_directories(dest, ec);
+          NSFileManager* fm = [NSFileManager defaultManager];
+          NSArray* contents = [fm contentsOfDirectoryAtURL:url includingResourceValuesForKeys:nil options:0 error:nil];
+          for (NSURL* item in contents) {
+            NSURL* dstItem = [NSURL fileURLWithPath:[NSString stringWithUTF8String:(dest / item.lastPathComponent.UTF8String).c_str()]];
+            [fm removeItemAtURL:dstItem error:nil];
+            [fm copyItemAtURL:item toURL:dstItem error:nil];
+          }
+          targetPath = dest;
+        }
+      } else {
+        std::string ext = sourcePath.extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        std::string srcStr = sourcePath.string();
+        std::string docsStr = docs.string();
+        if (srcStr.rfind(docsStr, 0) == 0) {
+          targetPath = sourcePath;
+        } else {
+          fs::path dest = (ext == ".xex") ? (docs / "game" / sourcePath.filename())
+                                          : (docs / sourcePath.filename());
+          fs::create_directories(dest.parent_path(), ec);
+          NSFileManager* fm = [NSFileManager defaultManager];
+          NSURL* dstUrl = [NSURL fileURLWithPath:[NSString stringWithUTF8String:dest.c_str()]];
+          [fm removeItemAtURL:dstUrl error:nil];
+          [fm copyItemAtURL:url toURL:dstUrl error:nil];
+          targetPath = fs::exists(dest, ec) ? dest : sourcePath;
+        }
+      }
+
+      if (securityAccess) {
+        [url stopAccessingSecurityScopedResource];
+      }
+
+      dispatch_async(dispatch_get_main_queue(), ^{
+        [progress dismissViewControllerAnimated:YES completion:^{
+          [self rescan];
+          if (!targetPath.empty()) {
+            self->_isoName = [NSString stringWithUTF8String:targetPath.filename().c_str()];
+            [self set:@"iso" to:self->_isoName];
+            self.navigationItem.rightBarButtonItem.enabled = YES;
+            [self.tableView reloadData];
+          }
+        }];
+      });
+    });
+  }];
 }
 
 - (void)dealloc {
@@ -1320,7 +1414,28 @@ NSString* AchievementSummary(const Achievements& a) {
       _isoName = name;
     }
   }
-  self.navigationItem.rightBarButtonItem.enabled = _isoName != nil;
+
+  std::error_code ec;
+  bool has_valid_target = false;
+  for (const fs::path& p : _isos) {
+    if (fs::is_regular_file(p, ec) && p.extension() == ".iso") {
+      has_valid_target = true;
+      break;
+    }
+    if (fs::is_directory(p, ec)) {
+      if (fs::is_regular_file(p / "default.xex", ec)) {
+        has_valid_target = true;
+        break;
+      }
+      auto it = fs::directory_iterator(p, ec);
+      if (it != fs::directory_iterator()) {
+        has_valid_target = true;
+        break;
+      }
+    }
+  }
+
+  self.navigationItem.rightBarButtonItem.enabled = (_isoName != nil) && has_valid_target;
   [self.tableView reloadData];
 }
 
@@ -1331,11 +1446,24 @@ NSString* AchievementSummary(const Achievements& a) {
 
 - (void)play {
   [self.view endEditing:YES];
+  std::error_code ec;
   for (const fs::path& p : _isos) {
     if ([_isoName isEqualToString:[NSString stringWithUTF8String:p.filename().c_str()]]) {
+      if (fs::is_directory(p, ec) && fs::directory_iterator(p, ec) == fs::directory_iterator()) {
+        UIAlertController* a =
+            [UIAlertController alertControllerWithTitle:@"Game Folder Empty"
+                                                message:@"The folder Documents/game is currently empty.\n\nPlease place your Xbox 360 NFS Carbon ISO or extracted game files into Documents/game/ (Files app › On My iPhone › NFS Carbon), or tap 'Select / Import Game'."
+                                         preferredStyle:UIAlertControllerStyleAlert];
+        [a addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        [self presentViewController:a animated:YES completion:nil];
+        return;
+      }
       _done(p);
       return;
     }
+  }
+  if (!_isos.empty()) {
+    _done(_isos.front());
   }
 }
 
@@ -1371,7 +1499,7 @@ NSString* AchievementSummary(const Achievements& a) {
 - (NSInteger)tableView:(UITableView*)tableView numberOfRowsInSection:(NSInteger)section {
   const NSInteger fixed = [self fixedSections];
   if (fixed && section == 0) {
-    return std::max<NSInteger>(1, NSInteger(_isos.size()));
+    return NSInteger(_isos.size()) + 1;
   }
   if (fixed && section == 1) {
     return 1;
@@ -1381,7 +1509,7 @@ NSString* AchievementSummary(const Achievements& a) {
 
 - (NSString*)tableView:(UITableView*)tableView titleForHeaderInSection:(NSInteger)section {
   const NSInteger fixed = [self fixedSections];
-  return fixed && section == 0   ? @"ISO"
+  return fixed && section == 0   ? @"Game Source (ISO or Documents/game)"
          : fixed && section == 1 ? @"Achievements"
                                  : [self sectionAt:section].title;
 }
@@ -1389,11 +1517,8 @@ NSString* AchievementSummary(const Achievements& a) {
 - (NSString*)tableView:(UITableView*)tableView titleForFooterInSection:(NSInteger)section {
   const NSInteger fixed = [self fixedSections];
   if (fixed && section == 0) {
-    return _isos.empty()
-               ? @"Copy your USA ISO into this app's folder (Files app › On My iPhone/iPad › "
-                 @"NFSMW, or LiveContainer's folder for it). This screen looks again when you "
-                 @"come back."
-               : (_isos.size() > 1 ? @"Tap the one to play." : nil);
+    return @"Automatically detects game files in Documents/game/ (like NFSU2) or any .iso in Documents/. "
+           @"You can also tap 'Select / Import Game' above to pick from Files or iCloud.";
   }
   if (fixed && section == 1) {
     return nil;
@@ -1417,17 +1542,49 @@ NSString* AchievementSummary(const Achievements& a) {
 
   const NSInteger fixed = [self fixedSections];
   if (fixed && ip.section == 0) {
-    if (_isos.empty()) {
-      c.text = @"No ISO found";
-      c.textProperties.color = UIColor.systemOrangeColor;
-      cell.selectionStyle = UITableViewCellSelectionStyleNone;
-    } else {
+    if (size_t(ip.row) < _isos.size()) {
       const fs::path& p = _isos[size_t(ip.row)];
       NSString* name = [NSString stringWithUTF8String:p.filename().c_str()];
-      c.text = name;
-      c.secondaryText = FileSize(p);
+      std::error_code ec;
+      if (fs::is_directory(p, ec)) {
+        c.image = [UIImage systemImageNamed:@"folder.fill"];
+        c.imageProperties.tintColor = UIColor.systemTealColor;
+        bool has_xex = fs::is_regular_file(p / "default.xex", ec);
+        bool has_iso = false;
+        for (const auto& e : fs::directory_iterator(p, ec)) {
+          std::string ext = e.path().extension().string();
+          std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+          if (ext == ".iso") { has_iso = true; break; }
+        }
+        auto it = fs::directory_iterator(p, ec);
+        bool empty = (it == fs::directory_iterator());
+
+        c.text = [NSString stringWithFormat:@"Documents/%@", name];
+        if (has_xex) {
+          c.secondaryText = @"Xbox 360 game folder (default.xex detected)";
+        } else if (has_iso) {
+          c.secondaryText = @"Game directory (.iso detected inside)";
+        } else if (empty) {
+          c.secondaryText = @"Folder ready (copy your game files or ISO here)";
+        } else {
+          c.secondaryText = @"Game folder (assets detected)";
+        }
+      } else {
+        c.image = [UIImage systemImageNamed:@"opticaldisc.fill"];
+        c.imageProperties.tintColor = UIColor.systemRedColor;
+        c.text = name;
+        c.secondaryText = FileSize(p);
+      }
       cell.accessoryType = [name isEqualToString:_isoName] ? UITableViewCellAccessoryCheckmark
                                                            : UITableViewCellAccessoryNone;
+      cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+    } else {
+      c.image = [UIImage systemImageNamed:@"plus.circle.fill"];
+      c.imageProperties.tintColor = UIColor.systemGreenColor;
+      c.text = @"Select / Import Game (ISO or Folder)...";
+      c.secondaryText = @"Pick an ISO or extracted game folder from Files or iCloud";
+      cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+      cell.selectionStyle = UITableViewCellSelectionStyleDefault;
     }
     cell.contentConfiguration = c;
     return cell;
@@ -1598,11 +1755,21 @@ NSString* AchievementSummary(const Achievements& a) {
     }
     return;
   }
-  if (fixed && ip.section == 0 && size_t(ip.row) < _isos.size()) {
-    _isoName = [NSString stringWithUTF8String:_isos[size_t(ip.row)].filename().c_str()];
-    [self set:@"iso" to:_isoName];
-    [tableView reloadSections:[NSIndexSet indexSetWithIndex:0]
-             withRowAnimation:UITableViewRowAnimationNone];
+  if (fixed && ip.section == 0) {
+    if (size_t(ip.row) < _isos.size()) {
+      _isoName = [NSString stringWithUTF8String:_isos[size_t(ip.row)].filename().c_str()];
+      [self set:@"iso" to:_isoName];
+      std::error_code ec;
+      const fs::path& p = _isos[size_t(ip.row)];
+      bool can_play = (fs::is_regular_file(p, ec) && p.extension() == ".iso") ||
+                      (fs::is_directory(p, ec) && fs::directory_iterator(p, ec) != fs::directory_iterator());
+      self.navigationItem.rightBarButtonItem.enabled = can_play;
+      [tableView reloadSections:[NSIndexSet indexSetWithIndex:0]
+               withRowAnimation:UITableViewRowAnimationNone];
+    } else {
+      [self pickGameSource];
+    }
+    return;
   }
 }
 
@@ -1620,17 +1787,78 @@ fs::path Documents() {
 }
 
 std::vector<fs::path> FindIsos(const fs::path& documents) {
-  std::vector<fs::path> isos;
+  std::vector<fs::path> targets;
   std::error_code ec;
+
+  // 1. Ensure Documents/game directory exists so users immediately see it in the Files app (like nfsu2)
+  fs::path game_dir = documents / "game";
+  fs::create_directories(game_dir, ec);
+
+  auto is_game_folder = [&](const fs::path& p) {
+    if (!fs::is_directory(p, ec)) return false;
+    if (fs::is_regular_file(p / "default.xex", ec)) return true;
+    for (const auto& e : fs::directory_iterator(p, ec)) {
+      std::string ext = e.path().extension().string();
+      std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+      if (ext == ".iso" || ext == ".xex" || ext == ".bin") return true;
+      if (e.is_directory(ec)) {
+        std::string name = e.path().filename().string();
+        std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+        if (name == "global" || name == "cars" || name == "tracks" || name == "media" || name == "sound") {
+          return true;
+        }
+      }
+    }
+    auto it = fs::directory_iterator(p, ec);
+    return (it != fs::directory_iterator());
+  };
+
+  // 2. Check Documents/game (the standard folder, like nfsu2-ios)
+  if (is_game_folder(game_dir)) {
+    targets.push_back(game_dir);
+  }
+
+  // 3. Check ISOs in Documents/ (shallow)
   for (const auto& e : fs::directory_iterator(documents, ec)) {
+    if (!e.is_regular_file(ec)) continue;
     std::string ext = e.path().extension().string();
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-    if (e.is_regular_file(ec) && ext == ".iso") {
-      isos.push_back(e.path());
+    if (ext == ".iso") {
+      targets.push_back(e.path());
     }
   }
-  std::sort(isos.begin(), isos.end());
-  return isos;
+
+  // 4. Check ISOs or game folders inside common locations
+  for (const auto& sub : {documents / "game", documents / "games", documents / "nfscarbon", documents / "NFSCarbon"}) {
+    if (fs::is_directory(sub, ec)) {
+      for (const auto& e : fs::directory_iterator(sub, ec)) {
+        if (!e.is_regular_file(ec)) continue;
+        std::string ext = e.path().extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        if (ext == ".iso") {
+          targets.push_back(e.path());
+        }
+      }
+    }
+  }
+
+  // 5. Check other subdirectories in Documents/
+  for (const auto& e : fs::directory_iterator(documents, ec)) {
+    if (e.is_directory(ec) && e.path() != game_dir && e.path() != (documents / "logs") && e.path() != (documents / "data")) {
+      if (is_game_folder(e.path())) {
+        targets.push_back(e.path());
+      }
+    }
+  }
+
+  // If no populated targets, include Documents/game as default placeholder
+  if (targets.empty() && fs::exists(game_dir, ec)) {
+    targets.push_back(game_dir);
+  }
+
+  std::sort(targets.begin(), targets.end());
+  targets.erase(std::unique(targets.begin(), targets.end()), targets.end());
+  return targets;
 }
 
 fs::path Run(const fs::path& documents) {

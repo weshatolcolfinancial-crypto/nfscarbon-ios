@@ -71,10 +71,12 @@ The resulting `NFSCarbon.ipa` will be output to `ios/build/NFSCarbon.ipa`.
 
 ## Installing and Playing on Device
 
-1. Import `NFSCarbon.ipa` into **LiveContainer** or install it via **SideStore**.
-2. Open the app once to initialize the container directories.
-3. Using the iOS **Files** app or Finder, copy your **NFS Carbon Xbox 360 ISO** into the app's `Documents/` directory (inside LiveContainer: `Data/Application/<NFSCarbon>/Documents`).
-4. Re-open the app, configure your resolution and graphics settings in the launcher screen, and press **Play**.
+1. Sideload `NFSCarbon.ipa` using **LiveContainer**, **SideStore**, **TrollStore**, or **AltStore**.
+2. Open the app once to initialize the directory structure (this creates `Documents/game/`, `Documents/logs/`, and `Documents/data/`).
+3. **Supplying Game Files (Two Easy Options):**
+   - **Option A (Automatic Detection, like NFSU2):** Using the iOS **Files** app ("On My iPhone" $\to$ "NFS Carbon"), or LiveContainer's file manager, copy your retail Xbox 360 NFS Carbon ISO or extracted game files directly into the **`Documents/game/`** folder! The app automatically discovers and selects them on launch.
+   - **Option B (In-App Picker):** Tap **"Select / Import Game (ISO or Folder)..."** directly on the launch screen to browse and select any `.iso` or game folder from Files, iCloud, or external storage.
+4. Adjust your resolution and graphic options, and tap **Play**!
 
 ---
 
