@@ -129,7 +129,15 @@ add_executable(nfscarbon MACOSX_BUNDLE
     src/boot_trace.cpp
     src/probe.cpp
     src/probe_apple.mm
-    src/probe_memory.cpp)
+    src/probe_memory.cpp
+    src/touch_controls.mm
+    src/battery.mm
+    src/display_rate.mm
+    src/lifecycle.mm
+    src/memory_report.mm
+    src/gpu_capture.mm
+    src/achievements_export.cpp
+    src/audio/coreaudio_driver.mm)
 
 set_target_properties(nfscarbon PROPERTIES
     OUTPUT_NAME "${NFSCARBON_EXECUTABLE}"
@@ -143,7 +151,8 @@ target_include_directories(nfscarbon PRIVATE
 
 target_link_libraries(nfscarbon PRIVATE rex::runtime nfscarbon_headers
     "-framework Foundation" "-framework UIKit" "-framework Metal" "-framework MetalFX"
-    "-framework QuartzCore" "-framework CoreImage" "-framework UniformTypeIdentifiers")
+    "-framework QuartzCore" "-framework CoreImage" "-framework UniformTypeIdentifiers"
+    "-framework AudioToolbox" "-framework AVFoundation" "-framework GameController")
 
 target_compile_definitions(nfscarbon PRIVATE
     REXGLUE_BUILD_CONFIG="$<CONFIG>"
@@ -160,14 +169,6 @@ if(NFSCARBON_WITH_GAME)
         "${NFSCARBON_REPO}/src/render_mode_hook.cpp"
         "${NFSCARBON_REPO}/src/ring_wait_hook.cpp"
         "${NFSCARBON_REPO}/src/dispatch_tolerance.cpp"
-        src/audio/coreaudio_driver.mm
-        src/achievements_export.cpp
-        src/battery.mm
-        src/gpu_capture.mm
-        src/display_rate.mm
-        src/lifecycle.mm
-        src/memory_report.mm
-        src/touch_controls.mm
         "${NFSCARBON_SDK}/src/ui/rex_app.cpp")
 
     target_sources(nfscarbon PRIVATE ${NFSCARBON_GAME_SOURCES})
@@ -176,9 +177,7 @@ if(NFSCARBON_WITH_GAME)
         "${NFSCARBON_REPO}/src"
         "${NFSCARBON_GEN_DIR}"
         "${NFSCARBON_SDK}/src/ui")
-    target_link_libraries(nfscarbon PRIVATE nfscarbon_recomp
-        "-framework AudioToolbox" "-framework AVFoundation" "-framework GameController"
-        "-framework Metal" "-framework QuartzCore" "-framework CoreImage")
+    target_link_libraries(nfscarbon PRIVATE nfscarbon_recomp)
 endif()
 
 # The Xenos GPU plugin is loaded via dlopen at runtime
