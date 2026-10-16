@@ -1,0 +1,39 @@
+# Build directories
+build/
+ios/build/
+out/
+bin/
+*.dylib
+*.app
+*.ipa
+
+# Generated C++ game code (contains copyrighted game logic; do not commit)
+ios/generated/
+generated/default/
+nfscarbon_manifest_ios.toml
+
+# Game files & ISOs (copyrighted materials)
+game/
+*.iso
+*.ISO
+*.xex
+*.XEX
+assets/game_root/
+
+# ReXGlue SDK build cache
+rexglue-sdk-ios/
+.nfscarbon-ios/
+.nfsmw-ios/
+
+# macOS / Xcode
+.DS_Store
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/
+DerivedData/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*~

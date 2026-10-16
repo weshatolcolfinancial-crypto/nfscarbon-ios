@@ -1,0 +1,172 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      xex_url:
+        description: 'Direct download URL for default.xex or zip containing it (optional)'
+        required: false
+        type: string
+      release_tag:
+        description: 'Release tag to publish (default: v0.3.3-ios)'
+        required: false
+        type: string
+        default: 'v0.3.3-ios'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios:
+    name: Build NFS Carbon iOS (arm64)
+    runs-on: macos-14
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tools (CMake, Ninja)
+        run: |
+          brew install cmake ninja
+
+      - name: Select Xcode Version
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Prepare ReXGlue SDK for iOS
+        run: |
+          python3 tools/prepare_sdk.py
+
+      - name: Fetch default.xex from input URL (if provided)
+        env:
+          INPUT_XEX_URL: ${{ inputs.xex_url }}
+        run: |
+          if [ -n "$INPUT_XEX_URL" ]; then
+            echo "==> Downloading default.xex from $INPUT_XEX_URL..."
+            mkdir -p game
+            curl -fSL "$INPUT_XEX_URL" -o /tmp/downloaded_xex
+            if file /tmp/downloaded_xex | grep -q 'Zip archive'; then
+              unzip -q /tmp/downloaded_xex -d /tmp/unzipped_xex
+              XEX_FOUND=$(find /tmp/unzipped_xex -name "default.xex" -o -name "*.xex" | head -1)
+              cp "$XEX_FOUND" game/default.xex
+            else
+              cp /tmp/downloaded_xex game/default.xex
+            fi
+          fi
+
+      - name: Generate Game Code (if default.xex present)
+        id: codegen
+        run: |
+          if [ -f "game/default.xex" ] || [ -f "assets/game_root/default.xex" ]; then
+            XEX_PATH="game/default.xex"
+            [ -f "assets/game_root/default.xex" ] && XEX_PATH="assets/game_root/default.xex"
+            echo "Found Xbox 360 binary at $XEX_PATH. Generating C++ code..."
+            python3 tools/generate_code.py --xex "$XEX_PATH"
+            echo "has_game=true" >> "$GITHUB_OUTPUT"
+            echo "IS_PROBE_BUILD=0" >> "$GITHUB_ENV"
+          else
+            echo "No default.xex detected. Building iOS runtime and Vulkan/Mach probe IPA."
+            echo "has_game=false" >> "$GITHUB_OUTPUT"
+            echo "IS_PROBE_BUILD=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Configure CMake (iOS Preset)
+        run: |
+          cd ios
+          cmake --preset ios
+
+      - name: Build NFSCarbon.ipa
+        run: |
+          cd ios
+          cmake --build --preset ios --target ipa -v
+
+      - name: Find Output IPA
+        id: find_ipa
+        run: |
+          IPA_PATH=$(find ios -name "NFSCarbon.ipa" -o -name "*.ipa" | head -n 1)
+          if [ -z "$IPA_PATH" ]; then
+            IPA_PATH=$(find ~/Library/Caches -name "NFSCarbon.ipa" -o -name "*.ipa" 2>/dev/null | head -n 1)
+          fi
+          echo "IPA located at: $IPA_PATH"
+          echo "ipa_path=$IPA_PATH" >> "$GITHUB_OUTPUT"
+          echo "IPA_FINAL_PATH=$IPA_PATH" >> "$GITHUB_ENV"
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NFSCarbon-iOS-ipa
+          path: ${{ steps.find_ipa.outputs.ipa_path }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Determine Release Tag
+        run: |
+          TAG="${{ inputs.release_tag }}"
+          if [ -z "$TAG" ]; then
+            TAG="${{ github.ref_name }}"
+          fi
+          if [ "$TAG" = "main" ] || [ "$TAG" = "master" ] || [ -z "$TAG" ]; then
+            TAG="v0.3.3-ios"
+          fi
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "Release tag: $TAG"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat << 'EOF' > /tmp/release_notes.md
+          ### Need for Speed: Carbon — iOS Recompiled Port (Metal / MoltenVK)
+
+          **Automated Native iOS IPA Build**
+
+          #### Installation
+          1. Sideload **`NFSCarbon.ipa`** onto your iPhone or iPad using **AltStore**, **SideStore**, **TrollStore**, or **LiveContainer**.
+          2. Launch the app once to initialize the directory structure.
+          3. Place your retail **NFS Carbon Xbox 360 ISO** into the app's `Documents/` folder (or select it in the pre-launch settings screen).
+          4. Tap **Play**!
+
+          #### Technical Highlights
+          - **Renderer:** MoltenVK over native **Metal** for modern Apple Silicon chips.
+          - **Guest Memory:** Backed by Mach memory entries (`mach_make_memory_entry_64`) to safely allocate the 4.5 GB guest address space inside the iOS sandbox.
+          - **Controls:** Built-in customizable touch overlay + native support for Xbox, DualSense, and MFi controllers.
+          EOF
+
+          if [ "$IS_PROBE_BUILD" = "1" ]; then
+            cat << 'EOF' >> /tmp/release_notes.md
+
+          > [!NOTE]
+          > This build is an iOS runtime/probe release. To build with ahead-of-time game translation included in the bundle, trigger the workflow providing `xex_url` or place `game/default.xex` in your repository.
+          EOF
+          fi
+
+          echo "Publishing release $RELEASE_TAG..."
+          if gh release view "$RELEASE_TAG" &>/dev/null; then
+            echo "Release $RELEASE_TAG exists. Updating asset..."
+            gh release upload "$RELEASE_TAG" "$IPA_FINAL_PATH" --clobber
+            gh release edit "$RELEASE_TAG" --notes-file /tmp/release_notes.md
+          else
+            echo "Creating release $RELEASE_TAG..."
+            gh release create "$RELEASE_TAG" "$IPA_FINAL_PATH" \
+              --title "NFS Carbon iOS $RELEASE_TAG" \
+              --notes-file /tmp/release_notes.md \
+              --target "${{ github.sha }}"
+          fi
