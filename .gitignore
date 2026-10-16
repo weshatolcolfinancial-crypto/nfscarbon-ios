@@ -32,8 +32,7 @@ xcuserdata/
 *.xcworkspace/
 DerivedData/
 
-# IDE / Editor
-.vscode/
-.idea/
-*.swp
-*~
+# Python
+__pycache__/
+*.pyc
+
