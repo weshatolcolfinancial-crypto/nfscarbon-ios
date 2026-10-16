@@ -78,18 +78,29 @@ jobs:
             fi
           fi
 
-      - name: Generate Game Code (if default.xex present)
+      - name: Prepare Recompiled Game Code
         id: codegen
         run: |
-          if [ -f "game/default.xex" ] || [ -f "assets/game_root/default.xex" ]; then
+          mkdir -p ios/generated/default
+          if [ -f "gen.tar.gz" ]; then
+            echo "==> Extracting pre-translated game code from gen.tar.gz..."
+            tar -xzf gen.tar.gz -C ios/generated/default/
+            ls -lh ios/generated/default | head -n 10
+            echo "has_game=true" >> "$GITHUB_OUTPUT"
+            echo "IS_PROBE_BUILD=0" >> "$GITHUB_ENV"
+          elif [ -f "game/default.xex" ] || [ -f "assets/game_root/default.xex" ]; then
             XEX_PATH="game/default.xex"
             [ -f "assets/game_root/default.xex" ] && XEX_PATH="assets/game_root/default.xex"
             echo "Found Xbox 360 binary at $XEX_PATH. Generating C++ code..."
             python3 tools/generate_code.py --xex "$XEX_PATH"
             echo "has_game=true" >> "$GITHUB_OUTPUT"
             echo "IS_PROBE_BUILD=0" >> "$GITHUB_ENV"
+          elif [ -f "ios/generated/default/sources.cmake" ]; then
+            echo "Found existing ios/generated/default/sources.cmake."
+            echo "has_game=true" >> "$GITHUB_OUTPUT"
+            echo "IS_PROBE_BUILD=0" >> "$GITHUB_ENV"
           else
-            echo "No default.xex detected. Building iOS runtime and Vulkan/Mach probe IPA."
+            echo "No default.xex or generated code detected. Building iOS runtime and Vulkan/Mach probe IPA."
             echo "has_game=false" >> "$GITHUB_OUTPUT"
             echo "IS_PROBE_BUILD=1" >> "$GITHUB_ENV"
           fi

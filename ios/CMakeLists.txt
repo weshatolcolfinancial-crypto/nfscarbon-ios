@@ -101,6 +101,8 @@ if(EXISTS "${NFSCARBON_GEN_DIR}/sources.cmake")
     rexglue_apply_target_settings(nfscarbon_recomp)
     if(EXISTS "${NFSCARBON_GEN_DIR}/nfscarbon_pch.h")
         target_precompile_headers(nfscarbon_recomp PRIVATE "${NFSCARBON_GEN_DIR}/nfscarbon_pch.h")
+    elseif(EXISTS "${NFSCARBON_GEN_DIR}/nfsc_pch.h")
+        target_precompile_headers(nfscarbon_recomp PRIVATE "${NFSCARBON_GEN_DIR}/nfsc_pch.h")
     endif()
     target_compile_options(nfscarbon_recomp PRIVATE -gline-tables-only -Wno-unused-variable)
     set_property(GLOBAL APPEND PROPERTY JOB_POOLS recomp=${NFSCARBON_JOBS_RECOMP})
@@ -166,6 +168,7 @@ target_compile_definitions(nfscarbon PRIVATE
 if(NFSCARBON_WITH_GAME)
     # Carbon engine hooks & runtime extensions
     set(NFSCARBON_GAME_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/game_app.cpp"
         "${NFSCARBON_REPO}/src/render_mode_hook.cpp"
         "${NFSCARBON_REPO}/src/ring_wait_hook.cpp"
         "${NFSCARBON_REPO}/src/dispatch_tolerance.cpp"

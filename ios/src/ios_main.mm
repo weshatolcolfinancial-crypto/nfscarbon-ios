@@ -359,7 +359,7 @@ int main(int argc, char* argv[]) {
       boot::SetEnabled(false);
     }
   } else {
-    texts.push_back("--log_file=" + (docs / "logs" / "nfscarbon.log").string());
+    texts.push_back("--log_file=" + (docs / "logs" / "nfsc.log").string());
     texts.push_back("--log_level=info");
   }
   std::vector<char*> args;
@@ -378,7 +378,7 @@ int main(int argc, char* argv[]) {
       boot::Trace("game: failed to start");
       SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "NFS Carbon",
                                "The game failed to start.\n\nThe reason is in the app's "
-                               "Documents/logs folder (boot.txt and nfscarbon.log).",
+                               "Documents/logs folder (boot.txt and nfsc.log).",
                                nullptr);
     }
     return result;
