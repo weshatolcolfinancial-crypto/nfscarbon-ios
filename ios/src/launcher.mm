@@ -548,7 +548,7 @@ const std::vector<Section>& Sections() {
       {@"Diagnostics", nil,
        {
            {@"logging", Type::kSwitch, @"Logging",
-            @"Writes Documents/logs/nfsmw.log and boot.txt. Off when just playing; on (and "
+            @"Writes Documents/logs/nfsc.log and boot.txt. Off when just playing; on (and "
             @"send the log) when testing something.",
             @"true"},
            {@"detailed_log", Type::kSwitch, @"Detailed log",

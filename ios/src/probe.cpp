@@ -177,7 +177,7 @@ void ProbeDevice(Report& report, const VulkanInstance& instance, VkPhysicalDevic
 
 int NfsmwVulkanProbe(const std::string& report_path) {
   Report report;
-  report.Line("NFSMW Recompiled - Vulkan probe (iOS)");
+  report.Line("NFS Carbon Recompiled - Vulkan probe (iOS)");
   // Which build this is: the report lines rarely change between builds, so
   // without this an old install looks the same as a new one.
   report.Line("Build: " __DATE__ " " __TIME__);
@@ -192,7 +192,7 @@ int NfsmwVulkanProbe(const std::string& report_path) {
   SDL_Window* window = nullptr;
   SDL_MetalView metal_view = nullptr;
   if (SDL_InitSubSystem(SDL_INIT_VIDEO)) {
-    window = SDL_CreateWindow("NFSMW", 0, 0,
+    window = SDL_CreateWindow("NFS Carbon", 0, 0,
                               SDL_WINDOW_FULLSCREEN | SDL_WINDOW_HIGH_PIXEL_DENSITY |
                                   SDL_WINDOW_METAL);
   }

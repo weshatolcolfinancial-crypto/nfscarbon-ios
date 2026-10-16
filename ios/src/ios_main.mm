@@ -145,7 +145,7 @@ std::vector<std::string> GameArguments(const fs::path& docs, const fs::path& iso
       "--user_language=" NFSMW_GAME_LANGUAGE,
       "--user_country=" NFSMW_GAME_COUNTRY,
       "--user_data_root=" + (docs / "data").string(),
-      "--log_file=" + (docs / "logs" / "nfsmw.log").string(),
+      "--log_file=" + (docs / "logs" / "nfsc.log").string(),
       // info, not debug: at debug, parche_anillo's XMA trace alone writes
       // ~4,700 lines a second (5 MB of log every ~10 s on an iPad M4), which
       // costs frames and rotates the startup lines out of the log.
@@ -239,7 +239,7 @@ int RunGame(int argc, char* argv[], const fs::path& docs) {
   // The log file now, not only when the app sets it up in SetupEnvironment:
   // that call only changes levels, and anything the SDK says before it lands
   // in the file too.
-  rex::InitLogging((docs / "logs" / "nfsmw.log").c_str(),
+  rex::InitLogging((docs / "logs" / "nfsc.log").c_str(),
                    REXCVAR_GET(log_level) == "off" ? spdlog::level::off : spdlog::level::info);
   REXLOG_INFO("[ios] game: starting, build " __DATE__ " " __TIME__
               " (MoltenVK submissions {}, MoltenVK profiling {})",
@@ -273,7 +273,7 @@ int RunGame(int argc, char* argv[], const fs::path& docs) {
   nfsmw::memory::StartPeriodicReports(10);
   nfsmw::battery::Start();
   boot::Trace(initialized ? "game: OnInitialize done, entering the main loop"
-                          : "game: OnInitialize FAILED (reason in nfsmw.log)");
+                          : "game: OnInitialize FAILED (reason in nfsc.log)");
   rex::FlushLogging();
   const int result = initialized ? context.RunMainMessageLoop() : EXIT_FAILURE;
   boot::Trace("game: main loop ended");
@@ -287,7 +287,7 @@ int RunProbe(int argc, char* argv[], const fs::path& docs) {
   rex::cvar::ApplyEnvironment();
   rex::InitLoggingEarly();
   // There is no app to open the log file in the probe: open it here.
-  rex::InitLogging((docs / "logs" / "nfsmw.log").c_str());
+  rex::InitLogging((docs / "logs" / "nfsc.log").c_str());
   return NfsmwVulkanProbe((docs / "vulkan_probe.txt").string());
 }
 
