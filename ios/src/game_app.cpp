@@ -46,6 +46,10 @@ REXCVAR_DEFINE_BOOL(ios_show_fps, true, "Display",
 #include <sys/mman.h>
 #endif
 
+namespace rex::runtime {
+::PPCFunc* ResolveIndirectFunction(uint32_t guest_address);
+}
+
 // Strong symbol override for sub_82470EA8 to prevent null-dereference crash during CRT _initterm
 extern "C" REX_FUNC(sub_82470EA8) {
   REX_FUNC_PROLOGUE();
@@ -123,6 +127,24 @@ class IosNfsCarbonApp : public NfsCarbonApp {
               REXLOG_WARN("[ios] Failed to map safe zero page at {:p}: errno {}", (void*)base, errno);
             }
 #endif
+            // Pre-resolve CRT static constructor and initializer tables to accelerate _initterm
+            auto WarmupTable = [&](uint32_t start_addr, uint32_t end_addr) {
+              uint32_t resolved = 0;
+              for (uint32_t addr = start_addr; addr < end_addr; addr += 4) {
+                uint32_t target = __builtin_bswap32(*reinterpret_cast<const uint32_t*>(base + addr));
+                if (target != 0 && target != 0xFFFFFFFF) {
+                  rex::runtime::ResolveIndirectFunction(target);
+                  resolved++;
+                }
+              }
+              return resolved;
+            };
+
+            uint32_t c_init = WarmupTable(0x82AA0000, 0x82AA000C);
+            uint32_t c_pre = WarmupTable(0x82AB27A0, 0x82AB27AC);
+            uint32_t cpp_init = WarmupTable(0x82AA0010, 0x82AB279C);
+            REXLOG_INFO("[ios] Pre-resolved CRT initializer tables: C={}+{}, C++={}",
+                        c_init, c_pre, cpp_init);
           }
         }
       }
