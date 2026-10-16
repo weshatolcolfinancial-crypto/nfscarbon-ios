@@ -225,6 +225,10 @@ int RunGame(int argc, char* argv[], const fs::path& docs) {
   boot::Trace("game: parsing the arguments");
   auto leftovers = rex::cvar::Init(argc, argv);
   rex::cvar::ApplyEnvironment();
+  // Ensure Vulkan backend and Xenos GPU plugin are strictly enforced for NFS Carbon
+  rex::cvar::SetFlagByName("gpu_backend", "vulkan");
+  rex::cvar::SetFlagByName("gpu_plugin", "xenos");
+  rex::cvar::SetFlagByName("nfsmw_native_present", "false");
   rex::InitLoggingEarly();
   // Before OnInitialize, which loads MoltenVK: it reads its settings from the
   // environment when it starts.

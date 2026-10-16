@@ -11,6 +11,8 @@
 
 #include <rex/logging.h>
 #include <rex/runtime.h>
+#include <rex/system/kernel_state.h>
+#include <rex/system/user_module.h>
 #include <rex/system/interfaces/graphics.h>
 
 #include "achievements_export.h"
@@ -52,6 +54,25 @@ class IosNfsCarbonApp : public NfsCarbonApp {
   void OnPreSetup(rex::RuntimeConfig& config) override {
     NfsCarbonApp::OnPreSetup(config);
     config.audio_factory = REX_AUDIO_BACKEND(rex::audio::ios::CoreAudioSystem);
+    config.gpu_plugin = "xenos";
+  }
+
+  void OnPreLaunchModule() override {
+    NfsCarbonApp::OnPreLaunchModule();
+    if (auto* rt = runtime()) {
+      if (auto* ks = rt->kernel_state()) {
+        if (auto mod = ks->GetExecutableModule()) {
+          const uint32_t ep = mod->entry_point();
+          if (ep == 0x829446E0 || (mod->title_id() == 0x454107EC && ep != 0x82944510)) {
+            mod->set_entry_point(0x82944510);
+            REXLOG_INFO("[ios] PreLaunchModule: overridden entry point 0x{:08X} -> 0x82944510 (xstart)", ep);
+          } else {
+            REXLOG_INFO("[ios] PreLaunchModule: title=0x{:08X}, entry_point=0x{:08X}",
+                        mod->title_id(), ep);
+          }
+        }
+      }
+    }
   }
 
   static void LogBuildIds() {
