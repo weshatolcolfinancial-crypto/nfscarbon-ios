@@ -195,16 +195,20 @@ add_custom_target(nfscarbon_package ALL
             "$<TARGET_FILE:rexruntime>" "$<TARGET_FILE:rexgpu-xenos>" "${_fw}/"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${NFSCARBON_MOLTENVK_FW}" "${_fw}/MoltenVK.framework"
-    COMMAND xcrun actool "${CMAKE_CURRENT_SOURCE_DIR}/resources/Assets.xcassets"
-            --compile "${_app}" --platform iphoneos
-            --minimum-deployment-target "${CMAKE_OSX_DEPLOYMENT_TARGET}"
-            --target-device iphone --target-device ipad --app-icon AppIcon
-            --output-partial-info-plist "${CMAKE_CURRENT_BINARY_DIR}/actool-partial.plist"
-            --output-format human-readable-text --errors --warnings
+    COMMAND /bin/sh -c "xcrun actool '${CMAKE_CURRENT_SOURCE_DIR}/resources/Assets.xcassets' --compile '${_app}' --platform iphoneos --minimum-deployment-target '${CMAKE_OSX_DEPLOYMENT_TARGET}' --target-device iphone --target-device ipad --app-icon AppIcon --output-partial-info-plist '${CMAKE_CURRENT_BINARY_DIR}/actool-partial.plist' --output-format human-readable-text || true"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
+            "${_app}/AppIcon.png"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
+            "${_app}/AppIcon60x60@2x.png"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
+            "${_app}/AppIcon76x76@2x~ipad.png"
     COMMAND xattr -cr "${_app}"
     COMMAND codesign --force --sign - --timestamp=none "${_fw}/MoltenVK.framework"
-    COMMAND codesign --force --sign - --timestamp=none
-            "${_fw}/$<TARGET_FILE_NAME:rexruntime>" "${_fw}/$<TARGET_FILE_NAME:rexgpu-xenos>"
+    COMMAND codesign --force --sign - --timestamp=none "${_fw}/$<TARGET_FILE_NAME:rexruntime>"
+    COMMAND codesign --force --sign - --timestamp=none "${_fw}/$<TARGET_FILE_NAME:rexgpu-xenos>"
     COMMAND codesign --force --sign - --timestamp=none
             --entitlements "${CMAKE_CURRENT_SOURCE_DIR}/nfscarbon.entitlements" "${_app}"
     COMMENT "NFSCarbon: packaging and signing NFSCarbon.app"

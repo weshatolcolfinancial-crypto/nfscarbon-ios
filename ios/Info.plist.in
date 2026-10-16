@@ -28,6 +28,12 @@
 	<string>@NFSCARBON_VERSION@</string>
 	<key>CFBundleVersion</key>
 	<string>@NFSCARBON_VERSION_CODE@</string>
+	<key>CFBundleIconFiles</key>
+	<array>
+		<string>AppIcon60x60@2x.png</string>
+		<string>AppIcon76x76@2x~ipad.png</string>
+		<string>AppIcon.png</string>
+	</array>
 	<key>CFBundleSupportedPlatforms</key>
 	<array>
 		<string>iPhoneOS</string>
