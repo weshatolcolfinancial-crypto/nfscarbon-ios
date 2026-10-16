@@ -32,6 +32,7 @@
 #include <SDL3/SDL_messagebox.h>
 
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <cstdlib>
@@ -307,6 +308,7 @@ int main(int argc, char* argv[]) {
   fs::create_directories(docs / "game", ec);
   fs::create_directories(docs / "logs", ec);
   fs::create_directories(docs / "data", ec);
+  chdir(docs.c_str());
 
   namespace boot = nfsmw::boot;
   boot::Open((docs / "logs" / "boot.txt").string());
@@ -331,6 +333,18 @@ int main(int argc, char* argv[]) {
       if (ext == ".iso") {
         game_target = e.path();
         break;
+      }
+    }
+    // If raw_target is a directory without default.xex and without an ISO, check if an ISO exists in docs
+    if (game_target == raw_target && !fs::is_regular_file(raw_target / "default.xex", ec)) {
+      for (const auto& e : fs::directory_iterator(docs, ec)) {
+        if (!e.is_regular_file(ec)) continue;
+        std::string ext = e.path().extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        if (ext == ".iso") {
+          game_target = e.path();
+          break;
+        }
       }
     }
   }

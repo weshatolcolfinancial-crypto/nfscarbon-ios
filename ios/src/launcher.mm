@@ -1219,6 +1219,32 @@ NSString* AchievementSummary(const Achievements& a) {
 - (void)pickGameSource;
 @end
 
+static bool CanPlaySource(const fs::path& p) {
+  std::error_code ec;
+  if (!fs::exists(p, ec)) return false;
+  if (fs::is_regular_file(p, ec)) {
+    std::string ext = p.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    return (ext == ".iso" || ext == ".xex");
+  }
+  if (fs::is_directory(p, ec)) {
+    if (fs::is_regular_file(p / "default.xex", ec)) return true;
+    for (const auto& e : fs::directory_iterator(p, ec)) {
+      std::string ext = e.path().extension().string();
+      std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+      if (ext == ".iso" || ext == ".xex") return true;
+      if (e.is_directory(ec)) {
+        std::string name = e.path().filename().string();
+        std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+        if (name == "global" || name == "cars" || name == "tracks" || name == "media" || name == "sound") {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 @implementation NFSLauncherController {
   fs::path _docs;
   std::function<void(fs::path)> _done;
@@ -1294,8 +1320,6 @@ NSString* AchievementSummary(const Achievements& a) {
 
 - (void)pickGameSource {
   NSMutableArray<UTType*>* types = [NSMutableArray arrayWithObject:UTTypeFolder];
-  [types addObject:UTTypeItem];
-  [types addObject:UTTypeData];
   UTType* isoType = [UTType typeWithFilenameExtension:@"iso"];
   if (isoType) [types addObject:isoType];
   UTType* xexType = [UTType typeWithFilenameExtension:@"xex"];
@@ -1320,9 +1344,23 @@ NSString* AchievementSummary(const Achievements& a) {
   fs::path docs = self->_docs;
   fs::path sourcePath(url.path.UTF8String);
 
+  std::string srcStr = sourcePath.string();
+  std::string docsStr = docs.string();
+  if (srcStr.rfind(docsStr, 0) == 0) {
+    if (securityAccess) {
+      [url stopAccessingSecurityScopedResource];
+    }
+    [self rescan];
+    self->_isoName = [NSString stringWithUTF8String:sourcePath.filename().c_str()];
+    [self set:@"iso" to:self->_isoName];
+    self.navigationItem.rightBarButtonItem.enabled = CanPlaySource(sourcePath);
+    [self.tableView reloadData];
+    return;
+  }
+
   UIAlertController* progress =
-      [UIAlertController alertControllerWithTitle:@"Loading Game..."
-                                          message:@"Processing selected game source..."
+      [UIAlertController alertControllerWithTitle:@"Importing Game..."
+                                          message:@"Copying selected game source to Documents/..."
                                    preferredStyle:UIAlertControllerStyleAlert];
   [self presentViewController:progress animated:YES completion:^{
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
@@ -1330,30 +1368,18 @@ NSString* AchievementSummary(const Achievements& a) {
       fs::path targetPath;
 
       if ([isDir boolValue]) {
-        std::string srcStr = sourcePath.string();
-        std::string docsStr = docs.string();
-        if (srcStr.rfind(docsStr, 0) == 0) {
-          targetPath = sourcePath;
-        } else {
-          fs::path dest = docs / "game";
-          fs::create_directories(dest, ec);
-          fs::copy(sourcePath, dest, fs::copy_options::recursive | fs::copy_options::overwrite_existing, ec);
-          targetPath = dest;
-        }
+        fs::path dest = docs / "game";
+        fs::create_directories(dest, ec);
+        fs::copy(sourcePath, dest, fs::copy_options::recursive | fs::copy_options::overwrite_existing, ec);
+        targetPath = dest;
       } else {
         std::string ext = sourcePath.extension().string();
         std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-        std::string srcStr = sourcePath.string();
-        std::string docsStr = docs.string();
-        if (srcStr.rfind(docsStr, 0) == 0) {
-          targetPath = sourcePath;
-        } else {
-          fs::path dest = (ext == ".xex") ? (docs / "game" / sourcePath.filename())
-                                          : (docs / sourcePath.filename());
-          fs::create_directories(dest.parent_path(), ec);
-          fs::copy_file(sourcePath, dest, fs::copy_options::overwrite_existing, ec);
-          targetPath = fs::exists(dest, ec) ? dest : sourcePath;
-        }
+        fs::path dest = (ext == ".xex") ? (docs / "game" / sourcePath.filename())
+                                        : (docs / sourcePath.filename());
+        fs::create_directories(dest.parent_path(), ec);
+        fs::copy_file(sourcePath, dest, fs::copy_options::overwrite_existing, ec);
+        targetPath = fs::exists(dest, ec) ? dest : sourcePath;
       }
 
       if (securityAccess) {
@@ -1366,7 +1392,7 @@ NSString* AchievementSummary(const Achievements& a) {
           if (!targetPath.empty()) {
             self->_isoName = [NSString stringWithUTF8String:targetPath.filename().c_str()];
             [self set:@"iso" to:self->_isoName];
-            self.navigationItem.rightBarButtonItem.enabled = YES;
+            self.navigationItem.rightBarButtonItem.enabled = CanPlaySource(targetPath);
             [self.tableView reloadData];
           }
         }];
@@ -1400,34 +1426,41 @@ NSString* AchievementSummary(const Achievements& a) {
   _isos = nfsmw::launcher::FindIsos(_docs);
   NSString* chosen = _settings[@"iso"];
   _isoName = nil;
+
+  // First try to match previously chosen setting if valid and playable
   for (const fs::path& p : _isos) {
     NSString* name = [NSString stringWithUTF8String:p.filename().c_str()];
-    if (!_isoName || [name isEqualToString:chosen]) {
+    if (chosen && [name isEqualToString:chosen] && CanPlaySource(p)) {
       _isoName = name;
-    }
-  }
-
-  std::error_code ec;
-  bool has_valid_target = false;
-  for (const fs::path& p : _isos) {
-    if (fs::is_regular_file(p, ec) && p.extension() == ".iso") {
-      has_valid_target = true;
       break;
     }
-    if (fs::is_directory(p, ec)) {
-      if (fs::is_regular_file(p / "default.xex", ec)) {
-        has_valid_target = true;
-        break;
-      }
-      auto it = fs::directory_iterator(p, ec);
-      if (it != fs::directory_iterator()) {
-        has_valid_target = true;
+  }
+
+  // If not chosen or not valid, pick the first actually playable target
+  if (!_isoName) {
+    for (const fs::path& p : _isos) {
+      if (CanPlaySource(p)) {
+        _isoName = [NSString stringWithUTF8String:p.filename().c_str()];
+        [self set:@"iso" to:_isoName];
         break;
       }
     }
   }
 
-  self.navigationItem.rightBarButtonItem.enabled = (_isoName != nil) && has_valid_target;
+  // Fall back to first target if nothing is playable yet
+  if (!_isoName && !_isos.empty()) {
+    _isoName = [NSString stringWithUTF8String:_isos.front().filename().c_str()];
+  }
+
+  bool can_play_current = false;
+  for (const fs::path& p : _isos) {
+    if ([_isoName isEqualToString:[NSString stringWithUTF8String:p.filename().c_str()]]) {
+      can_play_current = CanPlaySource(p);
+      break;
+    }
+  }
+
+  self.navigationItem.rightBarButtonItem.enabled = can_play_current;
   [self.tableView reloadData];
 }
 
@@ -1441,10 +1474,10 @@ NSString* AchievementSummary(const Achievements& a) {
   std::error_code ec;
   for (const fs::path& p : _isos) {
     if ([_isoName isEqualToString:[NSString stringWithUTF8String:p.filename().c_str()]]) {
-      if (fs::is_directory(p, ec) && fs::directory_iterator(p, ec) == fs::directory_iterator()) {
+      if (!CanPlaySource(p)) {
         UIAlertController* a =
-            [UIAlertController alertControllerWithTitle:@"Game Folder Empty"
-                                                message:@"The folder Documents/game is currently empty.\n\nPlease place your Xbox 360 NFS Carbon ISO or extracted game files into Documents/game/ (Files app › On My iPhone › NFS Carbon), or tap 'Select / Import Game'."
+            [UIAlertController alertControllerWithTitle:@"No Game Files Found"
+                                                message:@"The selected folder or path does not contain valid Xbox 360 game files (default.xex) or a .iso disc image.\n\nPlease copy your Need for Speed Carbon ISO or extracted game files into Documents/game/ using the Files app, or tap 'Select / Import Game'."
                                          preferredStyle:UIAlertControllerStyleAlert];
         [a addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
         [self presentViewController:a animated:YES completion:nil];
@@ -1749,13 +1782,10 @@ NSString* AchievementSummary(const Achievements& a) {
   }
   if (fixed && ip.section == 0) {
     if (size_t(ip.row) < _isos.size()) {
-      _isoName = [NSString stringWithUTF8String:_isos[size_t(ip.row)].filename().c_str()];
-      [self set:@"iso" to:_isoName];
-      std::error_code ec;
       const fs::path& p = _isos[size_t(ip.row)];
-      bool can_play = (fs::is_regular_file(p, ec) && p.extension() == ".iso") ||
-                      (fs::is_directory(p, ec) && fs::directory_iterator(p, ec) != fs::directory_iterator());
-      self.navigationItem.rightBarButtonItem.enabled = can_play;
+      _isoName = [NSString stringWithUTF8String:p.filename().c_str()];
+      [self set:@"iso" to:_isoName];
+      self.navigationItem.rightBarButtonItem.enabled = CanPlaySource(p);
       [tableView reloadSections:[NSIndexSet indexSetWithIndex:0]
                withRowAnimation:UITableViewRowAnimationNone];
     } else {
@@ -1786,31 +1816,7 @@ std::vector<fs::path> FindIsos(const fs::path& documents) {
   fs::path game_dir = documents / "game";
   fs::create_directories(game_dir, ec);
 
-  auto is_game_folder = [&](const fs::path& p) {
-    if (!fs::is_directory(p, ec)) return false;
-    if (fs::is_regular_file(p / "default.xex", ec)) return true;
-    for (const auto& e : fs::directory_iterator(p, ec)) {
-      std::string ext = e.path().extension().string();
-      std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-      if (ext == ".iso" || ext == ".xex" || ext == ".bin") return true;
-      if (e.is_directory(ec)) {
-        std::string name = e.path().filename().string();
-        std::transform(name.begin(), name.end(), name.begin(), ::tolower);
-        if (name == "global" || name == "cars" || name == "tracks" || name == "media" || name == "sound") {
-          return true;
-        }
-      }
-    }
-    auto it = fs::directory_iterator(p, ec);
-    return (it != fs::directory_iterator());
-  };
-
-  // 2. Check Documents/game (the standard folder, like nfsu2-ios)
-  if (is_game_folder(game_dir)) {
-    targets.push_back(game_dir);
-  }
-
-  // 3. Check ISOs in Documents/ (shallow)
+  // 2. Check ISOs in Documents/ (shallow) - HIGHEST PRIORITY for retail ISO files
   for (const auto& e : fs::directory_iterator(documents, ec)) {
     if (!e.is_regular_file(ec)) continue;
     std::string ext = e.path().extension().string();
@@ -1820,8 +1826,27 @@ std::vector<fs::path> FindIsos(const fs::path& documents) {
     }
   }
 
-  // 4. Check ISOs or game folders inside common locations
-  for (const auto& sub : {documents / "game", documents / "games", documents / "nfscarbon", documents / "NFSCarbon"}) {
+  // 3. Check ISOs inside Documents/game/
+  if (fs::is_directory(game_dir, ec)) {
+    for (const auto& e : fs::directory_iterator(game_dir, ec)) {
+      if (!e.is_regular_file(ec)) continue;
+      std::string ext = e.path().extension().string();
+      std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+      if (ext == ".iso") {
+        targets.push_back(e.path());
+      }
+    }
+  }
+
+  // 4. Check if Documents/game has default.xex or actual game data
+  if (CanPlaySource(game_dir)) {
+    if (std::find(targets.begin(), targets.end(), game_dir) == targets.end()) {
+      targets.push_back(game_dir);
+    }
+  }
+
+  // 5. Check ISOs or game folders inside common locations
+  for (const auto& sub : {documents / "games", documents / "nfscarbon", documents / "NFSCarbon"}) {
     if (fs::is_directory(sub, ec)) {
       for (const auto& e : fs::directory_iterator(sub, ec)) {
         if (!e.is_regular_file(ec)) continue;
@@ -1831,19 +1856,22 @@ std::vector<fs::path> FindIsos(const fs::path& documents) {
           targets.push_back(e.path());
         }
       }
+      if (CanPlaySource(sub)) {
+        targets.push_back(sub);
+      }
     }
   }
 
-  // 5. Check other subdirectories in Documents/
+  // 6. Check other subdirectories in Documents/
   for (const auto& e : fs::directory_iterator(documents, ec)) {
     if (e.is_directory(ec) && e.path() != game_dir && e.path() != (documents / "logs") && e.path() != (documents / "data")) {
-      if (is_game_folder(e.path())) {
+      if (CanPlaySource(e.path())) {
         targets.push_back(e.path());
       }
     }
   }
 
-  // If no populated targets, include Documents/game as default placeholder
+  // 7. If no populated targets, include Documents/game as default placeholder
   if (targets.empty() && fs::exists(game_dir, ec)) {
     targets.push_back(game_dir);
   }
