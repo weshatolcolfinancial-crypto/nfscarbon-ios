@@ -23,12 +23,12 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-ios:
     name: Build NFS Carbon iOS (arm64)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 180
 
     steps:
@@ -46,9 +46,15 @@ jobs:
         run: |
           brew install cmake ninja
 
-      - name: Select Xcode Version
+      - name: Select Xcode 16+ (for C++23 support)
         run: |
-          sudo xcode-select -s /Applications/Xcode.app
+          for xcode_path in /Applications/Xcode_16*.app /Applications/Xcode.app; do
+            if [ -d "$xcode_path" ]; then
+              echo "Selecting $xcode_path"
+              sudo xcode-select -s "$xcode_path"
+              break
+            fi
+          done
           xcodebuild -version
 
       - name: Prepare ReXGlue SDK for iOS
