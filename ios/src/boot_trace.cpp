@@ -20,6 +20,7 @@
 
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <atomic>
@@ -100,6 +101,11 @@ void OnTerminate() {
 }  // namespace
 
 void Open(const std::string& path) {
+  struct stat st{};
+  if (stat(path.c_str(), &st) == 0 && st.st_size > 512 * 1024) {
+    std::string prev = path + ".prev";
+    rename(path.c_str(), prev.c_str());
+  }
   const int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
   if (fd < 0) {
     return;

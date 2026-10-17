@@ -241,10 +241,14 @@ int RunGame(int argc, char* argv[], const fs::path& docs) {
     setenv("MVK_CONFIG_PERFORMANCE_TRACKING", "1", 1);
     setenv("MVK_CONFIG_PERFORMANCE_LOGGING_FRAME_COUNT", "300", 1);
   }
-  // The log file now, not only when the app sets it up in SetupEnvironment:
-  // that call only changes levels, and anything the SDK says before it lands
-  // in the file too.
-  rex::InitLogging((docs / "logs" / "nfsc.log").c_str(),
+  // Rotate previous log so each run starts with a clean, unbloated file
+  const fs::path log_path = docs / "logs" / "nfsc.log";
+  const fs::path prev_log_path = docs / "logs" / "nfsc.prev.log";
+  std::error_code ec;
+  if (fs::exists(log_path, ec)) {
+    fs::rename(log_path, prev_log_path, ec);
+  }
+  rex::InitLogging(log_path.c_str(),
                    REXCVAR_GET(log_level) == "off" ? spdlog::level::off : spdlog::level::info);
   REXLOG_INFO("[ios] game: starting, build " __DATE__ " " __TIME__
               " (MoltenVK submissions {}, MoltenVK profiling {})",
@@ -292,7 +296,13 @@ int RunProbe(int argc, char* argv[], const fs::path& docs) {
   rex::cvar::ApplyEnvironment();
   rex::InitLoggingEarly();
   // There is no app to open the log file in the probe: open it here.
-  rex::InitLogging((docs / "logs" / "nfsc.log").c_str());
+  const fs::path log_path = docs / "logs" / "nfsc.log";
+  const fs::path prev_log_path = docs / "logs" / "nfsc.prev.log";
+  std::error_code ec;
+  if (fs::exists(log_path, ec)) {
+    fs::rename(log_path, prev_log_path, ec);
+  }
+  rex::InitLogging(log_path.c_str());
   return NfsmwVulkanProbe((docs / "vulkan_probe.txt").string());
 }
 
