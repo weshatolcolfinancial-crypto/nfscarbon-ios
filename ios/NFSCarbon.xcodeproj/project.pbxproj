@@ -1,0 +1,354 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B1000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001 /* AppDelegate.swift */; };
+		B1000002 /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002 /* GameViewController.swift */; };
+		B1000003 /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000003 /* MetalRenderer.swift */; };
+		B1000004 /* TouchOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004 /* TouchOverlayView.swift */; };
+		B1000005 /* NFSCLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000005 /* NFSCLogger.swift */; };
+		B1000006 /* LoggerBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = A1000006 /* LoggerBridge.mm */; };
+		B1000008 /* CrashReporter.mm in Sources */ = {isa = PBXBuildFile; fileRef = A1000008 /* CrashReporter.mm */; };
+		B1000010 /* NFSCBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = A1000010 /* NFSCBridge.mm */; };
+		B1000014 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000014 /* Assets.xcassets */; };
+		FB100001 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000001 /* Metal.framework */; };
+		FB100002 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000002 /* MetalKit.framework */; };
+		FB100003 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000003 /* UIKit.framework */; };
+		FB100004 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000004 /* Foundation.framework */; };
+		FB100005 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000005 /* QuartzCore.framework */; };
+		FB100006 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000006 /* GameController.framework */; };
+		FB100007 /* UniformTypeIdentifiers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000007 /* UniformTypeIdentifiers.framework */; };
+		FB100008 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000008 /* AudioToolbox.framework */; };
+		FB100009 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1000009 /* AVFoundation.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A1000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = src/AppDelegate.swift; sourceTree = "<group>"; };
+		A1000002 /* GameViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = src/GameViewController.swift; sourceTree = "<group>"; };
+		A1000003 /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = src/MetalRenderer.swift; sourceTree = "<group>"; };
+		A1000004 /* TouchOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = src/TouchOverlayView.swift; sourceTree = "<group>"; };
+		A1000005 /* NFSCLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = src/NFSCLogger.swift; sourceTree = "<group>"; };
+		A1000006 /* LoggerBridge.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = src/LoggerBridge.mm; sourceTree = "<group>"; };
+		A1000007 /* LoggerBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = src/LoggerBridge.h; sourceTree = "<group>"; };
+		A1000008 /* CrashReporter.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = src/CrashReporter.mm; sourceTree = "<group>"; };
+		A1000009 /* CrashReporter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = src/CrashReporter.h; sourceTree = "<group>"; };
+		A1000010 /* NFSCBridge.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = src/NFSCBridge.mm; sourceTree = "<group>"; };
+		A1000011 /* NFSCBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = src/NFSCBridge.h; sourceTree = "<group>"; };
+		A1000012 /* NFSCarbon-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = src/NFSCarbon-Bridging-Header.h; sourceTree = "<group>"; };
+		A1000013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A1000014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = resources/Assets.xcassets; sourceTree = "<group>"; };
+		A1000015 /* nfscarbon.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = nfscarbon.entitlements; sourceTree = "<group>"; };
+		A1000025 /* NFSCarbon.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NFSCarbon.app; sourceTree = BUILT_PRODUCTS_DIR; };
+
+		F1000001 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		F1000002 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		F1000003 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		F1000004 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		F1000005 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		F1000006 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
+		F1000007 /* UniformTypeIdentifiers.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UniformTypeIdentifiers.framework; path = System/Library/Frameworks/UniformTypeIdentifiers.framework; sourceTree = SDKROOT; };
+		F1000008 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		F1000009 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000000000000000000011 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FB100001 /* Metal.framework in Frameworks */,
+				FB100002 /* MetalKit.framework in Frameworks */,
+				FB100003 /* UIKit.framework in Frameworks */,
+				FB100004 /* Foundation.framework in Frameworks */,
+				FB100005 /* QuartzCore.framework in Frameworks */,
+				FB100006 /* GameController.framework in Frameworks */,
+				FB100007 /* UniformTypeIdentifiers.framework in Frameworks */,
+				FB100008 /* AudioToolbox.framework in Frameworks */,
+				FB100009 /* AVFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10000000000000000000020 = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000021 /* Sources */,
+				A10000000000000000000022 /* Resources */,
+				A10000000000000000000023 /* Frameworks */,
+				A10000000000000000000024 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000000000000000000021 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001 /* AppDelegate.swift */,
+				A1000002 /* GameViewController.swift */,
+				A1000003 /* MetalRenderer.swift */,
+				A1000004 /* TouchOverlayView.swift */,
+				A1000005 /* NFSCLogger.swift */,
+				A1000006 /* LoggerBridge.mm */,
+				A1000007 /* LoggerBridge.h */,
+				A1000008 /* CrashReporter.mm */,
+				A1000009 /* CrashReporter.h */,
+				A1000010 /* NFSCBridge.mm */,
+				A1000011 /* NFSCBridge.h */,
+				A1000012 /* NFSCarbon-Bridging-Header.h */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000022 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A1000013 /* Info.plist */,
+				A1000014 /* Assets.xcassets */,
+				A1000015 /* nfscarbon.entitlements */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000000000000000000023 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F1000001 /* Metal.framework */,
+				F1000002 /* MetalKit.framework */,
+				F1000003 /* UIKit.framework */,
+				F1000004 /* Foundation.framework */,
+				F1000005 /* QuartzCore.framework */,
+				F1000006 /* GameController.framework */,
+				F1000007 /* UniformTypeIdentifiers.framework */,
+				F1000008 /* AudioToolbox.framework */,
+				F1000009 /* AVFoundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000024 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1000025 /* NFSCarbon.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000000000000000000002 /* NFSCarbon */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000004 /* Build configuration list for PBXNativeTarget "NFSCarbon" */;
+			buildPhases = (
+				A10000000000000000000010 /* Sources */,
+				A10000000000000000000011 /* Frameworks */,
+				A10000000000000000000012 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NFSCarbon;
+			productName = NFSCarbon;
+			productReference = A1000025 /* NFSCarbon.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A10000000000000000000002 = {
+						CreatedOnToolsVersion = 16.0;
+						LastSwiftMigration = 1600;
+					};
+				};
+			};
+			buildConfigurationList = A10000000000000000000003 /* Build configuration list for PBXProject "NFSCarbon" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A100000000000000000000020;
+			productRefGroup = A100000000000000000000024 /* Products */;
+			projectDirPath = "..";
+			projectRoot = "";
+			targets = (
+				A10000000000000000000002 /* NFSCarbon */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10000000000000000000012 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1000014 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000000000000000000010 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1000001 /* AppDelegate.swift in Sources */,
+				B1000002 /* GameViewController.swift in Sources */,
+				B1000003 /* MetalRenderer.swift in Sources */,
+				B1000004 /* TouchOverlayView.swift in Sources */,
+				B1000005 /* NFSCLogger.swift in Sources */,
+				B1000006 /* LoggerBridge.mm in Sources */,
+				B1000008 /* CrashReporter.mm in Sources */,
+				B1000010 /* NFSCBridge.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A10000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A10000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A10000000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = nfscarbon.entitlements;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGNING_ALLOWED = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.antigravity.nfscarbonios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "src/NFSCarbon-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A10000000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = nfscarbon.entitlements;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGNING_ALLOWED = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.antigravity.nfscarbonios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "src/NFSCarbon-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10000000000000000000003 /* Build configuration list for PBXProject "NFSCarbon" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000005 /* Debug */,
+				A10000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000004 /* Build configuration list for PBXNativeTarget "NFSCarbon" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000007 /* Debug */,
+				A10000000000000000000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A10000000000000000000001 /* Project object */;
+}

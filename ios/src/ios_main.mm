@@ -337,7 +337,9 @@ int main(int argc, char* argv[]) {
 
   fs::path game_target = raw_target;
   if (!raw_target.empty() && fs::is_directory(raw_target, ec)) {
+    // 1. Direct ISO file inside the directory
     for (const auto& e : fs::directory_iterator(raw_target, ec)) {
+      if (!e.is_regular_file(ec)) continue;
       std::string ext = e.path().extension().string();
       std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
       if (ext == ".iso") {
@@ -345,7 +347,49 @@ int main(int argc, char* argv[]) {
         break;
       }
     }
-    // If raw_target is a directory without default.xex and without an ISO, check if an ISO exists in docs
+
+    // 2. Case-insensitive check for default.xex directly in raw_target
+    if (game_target == raw_target) {
+      for (const auto& e : fs::directory_iterator(raw_target, ec)) {
+        if (!e.is_regular_file(ec)) continue;
+        std::string fname = e.path().filename().string();
+        std::transform(fname.begin(), fname.end(), fname.begin(), ::tolower);
+        if (fname == "default.xex") {
+          if (e.path().filename() != "default.xex") {
+            fs::copy_file(e.path(), raw_target / "default.xex", fs::copy_options::skip_existing, ec);
+          }
+          break;
+        }
+      }
+    }
+
+    // 3. Search nested subdirectories for default.xex or .iso (e.g. game/NFSC/ or game/extracted/)
+    if (game_target == raw_target && !fs::is_regular_file(raw_target / "default.xex", ec)) {
+      for (const auto& sub : fs::directory_iterator(raw_target, ec)) {
+        if (!sub.is_directory(ec)) continue;
+        for (const auto& e : fs::directory_iterator(sub.path(), ec)) {
+          if (!e.is_regular_file(ec)) continue;
+          std::string ext = e.path().extension().string();
+          std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+          if (ext == ".iso") {
+            game_target = e.path();
+            break;
+          }
+          std::string fname = e.path().filename().string();
+          std::transform(fname.begin(), fname.end(), fname.begin(), ::tolower);
+          if (fname == "default.xex") {
+            game_target = sub.path();
+            if (e.path().filename() != "default.xex") {
+              fs::copy_file(e.path(), sub.path() / "default.xex", fs::copy_options::skip_existing, ec);
+            }
+            break;
+          }
+        }
+        if (game_target != raw_target) break;
+      }
+    }
+
+    // 4. If raw_target is still missing default.xex, check if an ISO exists in Documents root
     if (game_target == raw_target && !fs::is_regular_file(raw_target / "default.xex", ec)) {
       for (const auto& e : fs::directory_iterator(docs, ec)) {
         if (!e.is_regular_file(ec)) continue;

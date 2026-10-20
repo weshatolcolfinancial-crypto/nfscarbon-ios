@@ -1228,16 +1228,23 @@ static bool CanPlaySource(const fs::path& p) {
     return (ext == ".iso" || ext == ".xex");
   }
   if (fs::is_directory(p, ec)) {
-    if (fs::is_regular_file(p / "default.xex", ec)) return true;
     for (const auto& e : fs::directory_iterator(p, ec)) {
-      std::string ext = e.path().extension().string();
-      std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-      if (ext == ".iso" || ext == ".xex") return true;
-      if (e.is_directory(ec)) {
-        std::string name = e.path().filename().string();
-        std::transform(name.begin(), name.end(), name.begin(), ::tolower);
-        if (name == "global" || name == "cars" || name == "tracks" || name == "media" || name == "sound") {
-          return true;
+      if (e.is_regular_file(ec)) {
+        std::string fname = e.path().filename().string();
+        std::transform(fname.begin(), fname.end(), fname.begin(), ::tolower);
+        if (fname == "default.xex") return true;
+        std::string ext = e.path().extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        if (ext == ".iso" || ext == ".xex") return true;
+      } else if (e.is_directory(ec)) {
+        for (const auto& sub_e : fs::directory_iterator(e.path(), ec)) {
+          if (!sub_e.is_regular_file(ec)) continue;
+          std::string fname = sub_e.path().filename().string();
+          std::transform(fname.begin(), fname.end(), fname.begin(), ::tolower);
+          if (fname == "default.xex") return true;
+          std::string ext = sub_e.path().extension().string();
+          std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+          if (ext == ".iso" || ext == ".xex") return true;
         }
       }
     }
