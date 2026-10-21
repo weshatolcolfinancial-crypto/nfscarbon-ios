@@ -24,6 +24,8 @@ extern const rex::PPCImageInfo PPCImageConfig;
 
 namespace {
 
+using rex::runtime::FunctionDispatcher;
+
 // Pure blr: preserves all context/registers and returns to caller, matching PowerPC 'blr' instruction
 void FastBlrStub(PPCContext& /*ctx*/, uint8_t* /*base*/) {
   return;
