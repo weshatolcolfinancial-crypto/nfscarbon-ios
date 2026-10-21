@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <mach/mach.h>
 #include <pthread.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>

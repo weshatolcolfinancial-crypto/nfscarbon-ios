@@ -25,7 +25,11 @@ CB_ANCHOR = '''static void ExceptionHandlerCallback(int signal_number, siginfo_t
 #else
 '''
 
-CB_NEW = '''static void ExceptionHandlerCallback(int signal_number, siginfo_t* signal_info,
+CB_NEW = '''#if defined(__APPLE__) || REX_PLATFORM_IOS || REX_PLATFORM_MAC
+#include <sys/mman.h>
+#endif
+
+static void ExceptionHandlerCallback(int signal_number, siginfo_t* signal_info,
                                      void* signal_context) {
 #if REX_PLATFORM_MAC
   // Darwin's mcontext_t is already a pointer (__darwin_mcontext64*); copy it.

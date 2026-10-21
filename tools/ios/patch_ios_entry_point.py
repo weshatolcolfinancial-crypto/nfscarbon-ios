@@ -59,6 +59,7 @@ KS_NEW = '''  // LOCAL PATCH - iOS: NFS Carbon (0x454107EC) retail disc XEX entr
   }
 
 #if defined(__APPLE__) || REX_PLATFORM_IOS
+#include <sys/mman.h>
   // Ensure main image memory (0x82000000 - 0x830D0000) has write permissions (PE header zeroing)
   if (auto* mem = memory()) {
     uint8_t* host_img_base = reinterpret_cast<uint8_t*>(mem->virtual_membase() + 0x82000000ULL);
