@@ -225,6 +225,11 @@ HIGH_MEM_NEW = '''  virtual_membase_ = mapping_base_;
     std::memset(high_arena, 0, 0x40000000ULL);
     REXSYS_INFO("Successfully mapped guest upper memory at host {}", fmt::ptr(high_arena));
   }
+
+  // Ensure main image memory (0x82000000 - 0x830D0000) has write permissions (PE header zeroing / self-modifying code)
+  uint8_t* host_img_base = base + 0x82000000ULL;
+  size_t img_size = 0x010D0000;
+  mprotect(host_img_base, img_size, PROT_READ | PROT_WRITE | PROT_EXEC);
 #endif
 
   REXSYS_INFO("Guest memory arena mapped: virtual base 0x{:016X}, physical base 0x{:016X}",

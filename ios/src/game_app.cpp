@@ -136,6 +136,16 @@ class IosNfsCarbonApp : public NfsCarbonApp {
               std::memset(high_arena, 0, 0x40000000ULL);
               REXLOG_INFO("[ios] Successfully mapped guest upper memory at host {:p}", high_arena);
             }
+
+            // Enable write permissions on main image memory (0x82000000 - 0x830D0000)
+            // for PE header zeroing and self-modifying code
+            uint8_t* host_img_base = (uint8_t*)(base + 0x82000000ULL);
+            size_t img_size = 0x010D0000; // Covers image range up to 0x830D0000
+            if (mprotect(host_img_base, img_size, PROT_READ | PROT_WRITE | PROT_EXEC) == 0) {
+              REXLOG_INFO("[ios] Enabled PROT_WRITE on main image range at {:p} (size 0x{:X})", (void*)host_img_base, img_size);
+            } else {
+              REXLOG_WARN("[ios] Failed to mprotect main image range at {:p}: errno {}", (void*)host_img_base, errno);
+            }
 #endif
             // Pre-resolve CRT static constructor and initializer tables to accelerate _initterm
             auto WarmupTable = [&](uint32_t start_addr, uint32_t end_addr) {

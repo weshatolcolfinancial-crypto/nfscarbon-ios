@@ -51,6 +51,20 @@ OPEN_ANCHOR = '''  if (!heap || heap->heap_type() != memory::HeapType::kGuestPhy
         "Unhandled guest access violation: {} of guest 0x{:08X} (host 0x{:016X}) on thread 0x{:X}",
 '''
 OPEN_NEW = '''  if (!heap || heap->heap_type() != memory::HeapType::kGuestPhysical) {
+    // LOCAL PATCH - iOS: If writing to the main image / PE header (0x82000000 - 0x830D0000),
+    // dynamically unprotect the page so self-modifying code or header zeroing succeeds.
+    if (is_write && (virtual_address >= 0x82000000 && virtual_address < 0x830D0000)) {
+      uintptr_t host_fault = reinterpret_cast<uintptr_t>(fault_host_address);
+      uintptr_t page_addr_16k = host_fault & ~((uintptr_t)16383ULL);
+      if (mprotect(reinterpret_cast<void*>(page_addr_16k), 16384, PROT_READ | PROT_WRITE | PROT_EXEC) == 0) {
+        return true;
+      }
+      uintptr_t page_addr_4k = host_fault & ~((uintptr_t)4095ULL);
+      if (mprotect(reinterpret_cast<void*>(page_addr_4k), 4096, PROT_READ | PROT_WRITE | PROT_EXEC) == 0) {
+        return true;
+      }
+    }
+
     // LOCAL PATCH - iOS: the same fault back to back is logged in full only
     // the first 3 times, then one line at 10, 100, 1000... repeats
     // (tools/ios/patch_ios_fault_log.py). A stuck guest thread logged ~1,500

@@ -58,6 +58,15 @@ KS_NEW = '''  // LOCAL PATCH - iOS: NFS Carbon (0x454107EC) retail disc XEX entr
     ep = 0x82944510;
   }
 
+#if defined(__APPLE__) || REX_PLATFORM_IOS
+  // Ensure main image memory (0x82000000 - 0x830D0000) has write permissions (PE header zeroing)
+  if (auto* mem = memory()) {
+    uint8_t* host_img_base = reinterpret_cast<uint8_t*>(mem->virtual_membase() + 0x82000000ULL);
+    size_t img_size = 0x010D0000;
+    mprotect(host_img_base, img_size, PROT_READ | PROT_WRITE | PROT_EXEC);
+  }
+#endif
+
   // Create a thread to run in.
   // We start suspended so the caller can inspect/attach before resume.
   auto thread = object_ref<XThread>(new XThread(

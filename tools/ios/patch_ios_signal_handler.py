@@ -47,6 +47,25 @@ CB_NEW = '''static void ExceptionHandlerCallback(int signal_number, siginfo_t* s
 #endif
     return;
   }
+
+  // 2. Handle write protection faults on PE header / image pages (0x82000000 - 0x830D0000)
+  if (guest_offset >= 0x82000000 && guest_offset < 0x830D0000) {
+    uintptr_t page_addr_16k = fault_addr & ~((uintptr_t)16383ULL);
+    if (mprotect(reinterpret_cast<void*>(page_addr_16k), 16384, PROT_READ | PROT_WRITE | PROT_EXEC) == 0) {
+      return; // Retry instruction with write access granted
+    }
+    uintptr_t page_addr_4k = fault_addr & ~((uintptr_t)4095ULL);
+    if (mprotect(reinterpret_cast<void*>(page_addr_4k), 4096, PROT_READ | PROT_WRITE | PROT_EXEC) == 0) {
+      return; // Retry instruction with write access granted
+    }
+    // If mprotect fails, step the ARM64 instruction pointer forward by 4 bytes
+#if __DARWIN_OPAQUE_ARM_THREAD_STATE64
+    mcontext->__ss.__opaque_pc = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mcontext->__ss.__opaque_pc) + 4);
+#else
+    mcontext->__ss.__pc += 4;
+#endif
+    return;
+  }
 #endif
 #else
 '''
