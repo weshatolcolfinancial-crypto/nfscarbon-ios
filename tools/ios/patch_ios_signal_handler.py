@@ -34,7 +34,12 @@ CB_NEW = '''static void ExceptionHandlerCallback(int signal_number, siginfo_t* s
   // LOCAL PATCH - iOS (tools/ios/patch_ios_signal_handler.py):
   // Bypass 0x70000002 / unmapped guest memory read faults by advancing PC by 4
   uintptr_t fault_addr = reinterpret_cast<uintptr_t>(signal_info ? signal_info->si_addr : 0);
-  if (fault_addr == 0x70000002 || (fault_addr >= 0x40000000 && fault_addr < 0x80000000)) {
+  uint64_t guest_offset = fault_addr & 0xFFFFFFFFULL;
+  bool is_guest_fault = (fault_addr == 0x70000002) || 
+                        (fault_addr >= 0x40000000 && fault_addr < 0x80000000) ||
+                        (guest_offset == 0x70000002) ||
+                        (guest_offset >= 0x40000000 && guest_offset < 0x80000000);
+  if (is_guest_fault) {
 #if __DARWIN_OPAQUE_ARM_THREAD_STATE64
     mcontext->__ss.__opaque_pc = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mcontext->__ss.__opaque_pc) + 4);
 #else

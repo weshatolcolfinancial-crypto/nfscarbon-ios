@@ -215,12 +215,15 @@ HIGH_MEM_NEW = '''  virtual_membase_ = mapping_base_;
 
 #if REX_PLATFORM_IOS
   // LOCAL PATCH - iOS (tools/ios/patch_ios_memory.py):
-  // Map guest high addresses (0x40000000 to 0x7FFFFFFF) as non-faulting zero memory
-  void* high_vmem = mmap(reinterpret_cast<void*>(virtual_membase_ + 0x40000000), 0x40000000,
-                         PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
-  if (high_vmem != MAP_FAILED) {
-    std::memset(high_vmem, 0, 0x40000000);
-    REXSYS_INFO("Mapped non-faulting upper virtual memory (0x40000000-0x7FFFFFFF) at {}", fmt::ptr(high_vmem));
+  // Map guest 0x40000000 through 0x7FFFFFFF (1GB size)
+  uint8_t* base = reinterpret_cast<uint8_t*>(virtual_membase_);
+  void* high_arena = mmap(base + 0x40000000ULL, 0x40000000ULL,
+                          PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
+  if (high_arena == MAP_FAILED) {
+    REXSYS_ERROR("Failed to map guest high memory arena at {}: {}", fmt::ptr(base + 0x40000000ULL), std::strerror(errno));
+  } else {
+    std::memset(high_arena, 0, 0x40000000ULL);
+    REXSYS_INFO("Successfully mapped guest upper memory at host {}", fmt::ptr(high_arena));
   }
 #endif
 

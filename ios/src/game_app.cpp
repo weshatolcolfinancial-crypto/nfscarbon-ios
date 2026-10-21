@@ -128,13 +128,13 @@ class IosNfsCarbonApp : public NfsCarbonApp {
             }
 
             // Map guest high addresses (0x40000000 to 0x7FFFFFFF) as non-faulting zero memory
-            void* high_ptr = mmap((void*)(base + 0x40000000), 0x40000000, PROT_READ | PROT_WRITE, 
-                                  MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
-            if (high_ptr != MAP_FAILED) {
-              std::memset(high_ptr, 0, 0x40000000);
-              REXLOG_INFO("[ios] Mapped guest high addresses (0x40000000 to 0x7FFFFFFF) as non-faulting zero memory at {:p}", high_ptr);
+            void* high_arena = mmap(base + 0x40000000ULL, 0x40000000ULL, PROT_READ | PROT_WRITE, 
+                                    MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
+            if (high_arena == MAP_FAILED) {
+              REXLOG_ERROR("[ios] Failed to map guest high memory arena at {:p}: errno {}", (void*)(base + 0x40000000ULL), errno);
             } else {
-              REXLOG_WARN("[ios] Failed to map high virtual memory at {:p}: errno {}", (void*)(base + 0x40000000), errno);
+              std::memset(high_arena, 0, 0x40000000ULL);
+              REXLOG_INFO("[ios] Successfully mapped guest upper memory at host {:p}", high_arena);
             }
 #endif
             // Pre-resolve CRT static constructor and initializer tables to accelerate _initterm

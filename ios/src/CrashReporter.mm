@@ -105,7 +105,12 @@ static void SignalHandler(int sig, siginfo_t* info, void* ucontext) {
         ucontext_t* uc = (ucontext_t*)ucontext;
         if (uc->uc_mcontext) {
             uintptr_t fault_addr = (uintptr_t)(info ? info->si_addr : 0);
-            if (fault_addr == 0x70000002 || (fault_addr >= 0x40000000 && fault_addr < 0x80000000)) {
+            uint64_t guest_offset = fault_addr & 0xFFFFFFFFULL;
+            bool is_guest_fault = (fault_addr == 0x70000002) || 
+                                  (fault_addr >= 0x40000000 && fault_addr < 0x80000000) ||
+                                  (guest_offset == 0x70000002) ||
+                                  (guest_offset >= 0x40000000 && guest_offset < 0x80000000);
+            if (is_guest_fault) {
                 // Bypass 0x70000002 / guest memory read faults by advancing PC by 4
 #if __DARWIN_OPAQUE_ARM_THREAD_STATE64
                 uc->uc_mcontext->__ss.__opaque_pc = (void*)((uintptr_t)uc->uc_mcontext->__ss.__opaque_pc + 4);

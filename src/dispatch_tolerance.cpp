@@ -137,7 +137,7 @@ namespace rex::runtime {
           }
         }
 
-        if (base) {
+        if (base && IsWithinModuleCodeRange(guest_address)) {
           uint32_t insn = __builtin_bswap32(*reinterpret_cast<const uint32_t*>(base + guest_address));
           if (insn == 0x4E800020) {  // blr (return from subroutine)
             SafeSetFunction(d, guest_address, &FastBlrStub);
@@ -155,14 +155,14 @@ namespace rex::runtime {
     }
   }
 
-  // 4. Fallback instruction inspection in guest memory
+  // 4. Fallback instruction inspection in guest memory (module code range only)
   uint8_t* base = nullptr;
   if (auto* ks = rt->kernel_state()) {
     if (auto* mem = ks->memory()) {
       base = mem->virtual_membase();
     }
   }
-  if (base) {
+  if (base && IsWithinModuleCodeRange(guest_address)) {
     // Avoid reading outside mapped guest regions
     uint32_t insn = __builtin_bswap32(*reinterpret_cast<const uint32_t*>(base + guest_address));
     if (insn == 0x4E800020) {
