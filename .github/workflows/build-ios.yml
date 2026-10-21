@@ -105,6 +105,14 @@ jobs:
             echo "IS_PROBE_BUILD=1" >> "$GITHUB_ENV"
           fi
 
+      - name: Clean Rebuild Cache & Derived Data
+        run: |
+          echo "==> Wiping all cached .build, derived data, and CMake caches..."
+          rm -rf "$HOME/Library/Caches/nfscarbon-ios"
+          rm -rf ios/build build .build DerivedData
+          rm -rf ../rexglue-sdk-ios/build ../rexglue-sdk-ios/.build
+          touch ios/src/ios_main.mm
+
       - name: Configure CMake (iOS Preset)
         run: |
           cd ios

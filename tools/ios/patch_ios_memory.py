@@ -204,6 +204,29 @@ VIEWS_NEW = '''#if REX_PLATFORM_IOS
 #endif
 '''
 
+HIGH_MEM_ANCHOR = '''  virtual_membase_ = mapping_base_;
+  physical_membase_ = mapping_base_ + 0x100000000ull;
+
+  REXSYS_INFO("Guest memory arena mapped: virtual base 0x{:016X}, physical base 0x{:016X}",
+'''
+
+HIGH_MEM_NEW = '''  virtual_membase_ = mapping_base_;
+  physical_membase_ = mapping_base_ + 0x100000000ull;
+
+#if REX_PLATFORM_IOS
+  // LOCAL PATCH - iOS (tools/ios/patch_ios_memory.py):
+  // Map guest high addresses (0x40000000 to 0x7FFFFFFF) as non-faulting zero memory
+  void* high_vmem = mmap(reinterpret_cast<void*>(virtual_membase_ + 0x40000000), 0x40000000,
+                         PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
+  if (high_vmem != MAP_FAILED) {
+    std::memset(high_vmem, 0, 0x40000000);
+    REXSYS_INFO("Mapped non-faulting upper virtual memory (0x40000000-0x7FFFFFFF) at {}", fmt::ptr(high_vmem));
+  }
+#endif
+
+  REXSYS_INFO("Guest memory arena mapped: virtual base 0x{:016X}, physical base 0x{:016X}",
+'''
+
 BLOCKS = [
     ("src/core/memory_posix.cpp", "mach_vm_region through vm_region_64", MACH_ANCHOR, MACH_NEW),
     ("src/core/memory_posix.cpp", "guest memory as a Mach memory entry", CREATE_ANCHOR,
@@ -211,7 +234,9 @@ BLOCKS = [
     ("src/core/memory_posix.cpp", "release the Mach memory entry", CLOSE_ANCHOR, CLOSE_NEW),
     ("src/core/memory_posix.cpp", "map views with vm_map", MAP_ANCHOR, MAP_NEW),
     ("src/system/xmemory.cpp", "guest views through MapFileView", VIEWS_ANCHOR, VIEWS_NEW),
+    ("src/system/xmemory.cpp", "map non-faulting upper virtual memory", HIGH_MEM_ANCHOR, HIGH_MEM_NEW),
 ]
 
 if __name__ == "__main__":
     sys.exit(run("ios_memory", BLOCKS))
+

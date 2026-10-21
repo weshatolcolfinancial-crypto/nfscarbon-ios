@@ -34,16 +34,11 @@ PAYLOAD_DIR="${BUILD_DIR}/Payload"
 OUTPUT_IPA="${BUILD_DIR}/${PROJECT_NAME}.ipa"
 ENTITLEMENTS="${SCRIPT_DIR}/ios/nfscarbon.entitlements"
 
-# 1. Prepare build directories
-echo -e "\n${BOLD}${YELLOW}[1/5] Preparing build workspace...${RESET}"
-TMP_BACKUP_IPA=""
-if [ -f "${BUILD_DIR}/.existing_NFSCarbon.ipa" ]; then
-    TMP_BACKUP_IPA="${BUILD_DIR}/.existing_NFSCarbon.ipa"
-elif [ -f "${OUTPUT_IPA}" ]; then
-    TMP_BACKUP_IPA="${BUILD_DIR}/.existing_NFSCarbon.ipa"
-    mv "${OUTPUT_IPA}" "${TMP_BACKUP_IPA}"
-fi
-rm -rf "${PAYLOAD_DIR}" "${ARCHIVE_PATH}" "${DERIVED_DATA_DIR}"
+# 1. Clean Rebuild: Delete all cached .build and derived data products
+echo -e "\n${BOLD}${YELLOW}[1/5] Clean rebuild: purging build cache and derived data...${RESET}"
+rm -rf "${BUILD_DIR}" "${PAYLOAD_DIR}" "${ARCHIVE_PATH}" "${DERIVED_DATA_DIR}"
+rm -rf "${SCRIPT_DIR}/.build" "${SCRIPT_DIR}/ios/build"
+rm -rf "${HOME:-~}/Library/Caches/nfscarbon-ios"
 mkdir -p "${BUILD_DIR}"
 
 if command -v xcodebuild >/dev/null 2>&1; then
@@ -54,8 +49,6 @@ if command -v xcodebuild >/dev/null 2>&1; then
         -derivedDataPath "${DERIVED_DATA_DIR}" \
         -quiet || true
     echo -e "${GREEN}✓ Clean completed.${RESET}"
-else
-    echo -e "${YELLOW}Notice: xcodebuild not found in current PATH. Checking for prebuilt app bundles or IPA...${RESET}"
 fi
 
 # 2. Run xcodebuild archive or assemble app bundle

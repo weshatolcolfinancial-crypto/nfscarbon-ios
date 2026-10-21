@@ -126,6 +126,16 @@ class IosNfsCarbonApp : public NfsCarbonApp {
             } else {
               REXLOG_WARN("[ios] Failed to map safe zero page at {:p}: errno {}", (void*)base, errno);
             }
+
+            // Map guest high addresses (0x40000000 to 0x7FFFFFFF) as non-faulting zero memory
+            void* high_ptr = mmap((void*)(base + 0x40000000), 0x40000000, PROT_READ | PROT_WRITE, 
+                                  MAP_ANON | MAP_PRIVATE | MAP_FIXED, -1, 0);
+            if (high_ptr != MAP_FAILED) {
+              std::memset(high_ptr, 0, 0x40000000);
+              REXLOG_INFO("[ios] Mapped guest high addresses (0x40000000 to 0x7FFFFFFF) as non-faulting zero memory at {:p}", high_ptr);
+            } else {
+              REXLOG_WARN("[ios] Failed to map high virtual memory at {:p}: errno {}", (void*)(base + 0x40000000), errno);
+            }
 #endif
             // Pre-resolve CRT static constructor and initializer tables to accelerate _initterm
             auto WarmupTable = [&](uint32_t start_addr, uint32_t end_addr) {

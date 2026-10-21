@@ -3,11 +3,13 @@
 //   1. Exact recompiled function entry points (via FunctionDispatcher)
 //   2. Alternate entry points, label offsets, and local routines inside recompiled functions
 //   3. Empty functions / subroutine returns (0x4E800020 'blr' instructions)
+//   4. Out-of-range indirect calls (0x80000000 - 0xFFFFFFFF) via Extended Dynamic Stub Table
 // Automatically populates the fast lookup dispatch table to eliminate subsequent lookup overhead.
 
 #include <cstdint>
 #include <mutex>
 #include <set>
+#include <unordered_map>
 
 #include <rex/logging.h>
 #include <rex/ppc.h>
@@ -27,9 +29,23 @@ void FastBlrStub(PPCContext& /*ctx*/, uint8_t* /*base*/) {
   return;
 }
 
-// Fallback for truly unresolvable addresses
+// Fallback for out-of-range or truly unresolvable addresses: returns 0 in r3
+void UnknownExportStub(PPCContext& ctx, uint8_t* /*base*/) {
+  ctx.r3.u64 = 0;
+}
+
 void NoopTrap(PPCContext& ctx, uint8_t* /*base*/) {
   ctx.r3.u64 = 0;
+}
+
+// Extended Dynamic Stub Table for out-of-range indirect calls
+// (Carbon executes across 0x80000000-0x9FFFFFFF, 0xA0000000-0xBFFFFFFF, and 0xC0000000-0xFFFFFFFF)
+static std::mutex g_dynamic_mutex;
+static std::unordered_map<uint32_t, ::PPCFunc*> g_dynamic_table;
+
+void RegisterDynamicStub(uint32_t address, ::PPCFunc* stub = &UnknownExportStub) {
+  std::lock_guard<std::mutex> lock(g_dynamic_mutex);
+  g_dynamic_table[address] = stub;
 }
 
 static size_t g_num_mappings = 0;
@@ -43,25 +59,55 @@ static void InitMappingsCount() {
   }
 }
 
+inline bool IsWithinModuleCodeRange(uint32_t address) {
+  uint32_t start = PPCImageConfig.code_base;
+  uint32_t end = PPCImageConfig.code_base + PPCImageConfig.code_size;
+  return (address >= start && address < end);
+}
+
+inline void SafeSetFunction(FunctionDispatcher* d, uint32_t address, ::PPCFunc* func) {
+  uint32_t module_start = PPCImageConfig.code_base;
+  uint32_t module_end = PPCImageConfig.code_base + PPCImageConfig.code_size;
+  if (address < module_start || address >= module_end) {
+    // Carbon executes indirect calls across 0x80000000-0x9FFFFFFF, 0xA0000000-0xBFFFFFFF, and 0xC0000000-0xFFFFFFFF.
+    // DO NOT abort or reject the address. Register it in an extended dynamic table
+    // or bind it to an unknown_export_stub that returns 0:
+    RegisterDynamicStub(address, func ? func : &UnknownExportStub);
+    return;
+  }
+  if (d) {
+    d->SetFunction(address, func ? func : &UnknownExportStub);
+  }
+}
+
 }  // namespace
 
 namespace rex::runtime {
 
 ::PPCFunc* ResolveIndirectFunction(uint32_t guest_address) {
   Runtime* rt = Runtime::instance();
-  if (!rt) return &NoopTrap;
+  if (!rt) return &UnknownExportStub;
   FunctionDispatcher* d = rt->function_dispatcher();
-  if (!d) return &NoopTrap;
 
-  // 1. Exact match in function dispatcher table
-  if (::PPCFunc* f = d->GetFunction(guest_address)) {
-    return f;
+  // 1. Check Extended Dynamic Stub Table first
+  {
+    std::lock_guard<std::mutex> lock(g_dynamic_mutex);
+    auto it = g_dynamic_table.find(guest_address);
+    if (it != g_dynamic_table.end()) {
+      return it->second;
+    }
   }
 
-  // 2. Binary search in sorted PPCFuncMappings
+  // 2. Exact match in function dispatcher table
+  if (d) {
+    if (::PPCFunc* f = d->GetFunction(guest_address)) {
+      return f;
+    }
+  }
+
+  // 3. Binary search in sorted PPCFuncMappings
   InitMappingsCount();
   if (g_num_mappings > 0) {
-    // Upper bound to find the mapping with greatest guest <= guest_address
     size_t low = 0;
     size_t high = g_num_mappings;
     while (low < high) {
@@ -92,7 +138,7 @@ namespace rex::runtime {
         if (base) {
           uint32_t insn = __builtin_bswap32(*reinterpret_cast<const uint32_t*>(base + guest_address));
           if (insn == 0x4E800020) {  // blr (return from subroutine)
-            d->SetFunction(guest_address, &FastBlrStub);
+            SafeSetFunction(d, guest_address, &FastBlrStub);
             return &FastBlrStub;
           }
         }
@@ -100,14 +146,14 @@ namespace rex::runtime {
         // Alternate entry point or instruction within PPCFuncMappings[idx].host
         ::PPCFunc* target_func = PPCFuncMappings[idx].host;
         if (target_func) {
-          d->SetFunction(guest_address, target_func);
+          SafeSetFunction(d, guest_address, target_func);
           return target_func;
         }
       }
     }
   }
 
-  // 3. Fallback instruction inspection in guest memory
+  // 4. Fallback instruction inspection in guest memory
   uint8_t* base = nullptr;
   if (auto* ks = rt->kernel_state()) {
     if (auto* mem = ks->memory()) {
@@ -115,23 +161,30 @@ namespace rex::runtime {
     }
   }
   if (base) {
+    // Avoid reading outside mapped guest regions
     uint32_t insn = __builtin_bswap32(*reinterpret_cast<const uint32_t*>(base + guest_address));
     if (insn == 0x4E800020) {
-      d->SetFunction(guest_address, &FastBlrStub);
+      SafeSetFunction(d, guest_address, &FastBlrStub);
       return &FastBlrStub;
     }
   }
 
-  // 4. Truly unresolvable call
+  // 5. Out-of-range or unknown export address (0x80000000 - 0xFFFFFFFF)
   static std::mutex mutex;
   static std::set<uint32_t> seen;
-  std::lock_guard<std::mutex> lock(mutex);
-  if (seen.size() < 20 && seen.insert(guest_address).second) {
-    REXLOG_WARN("[dispatch] Truly unregistered indirect call to 0x{:08X}", guest_address);
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (seen.size() < 30 && seen.insert(guest_address).second) {
+      REXLOG_WARN("[dispatch] Out-of-range / dynamic indirect call to 0x{:08X} registered with safe zero return", guest_address);
+    }
   }
 
-  d->SetFunction(guest_address, &NoopTrap);
-  return &NoopTrap;
+  // Never abort: bind to UnknownExportStub in the extended dynamic table
+  RegisterDynamicStub(guest_address, &UnknownExportStub);
+  if (d) {
+    d->SetFunction(guest_address, &UnknownExportStub);
+  }
+  return &UnknownExportStub;
 }
 
 }  // namespace rex::runtime

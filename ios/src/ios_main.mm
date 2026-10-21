@@ -47,6 +47,7 @@
 #include "audio/coreaudio_driver.h"
 #include "battery.h"
 #include "boot_trace.h"
+#include "CrashReporter.h"
 #include "launcher.h"
 #include "memory_report.h"
 
@@ -319,6 +320,7 @@ int main(int argc, char* argv[]) {
   fs::create_directories(docs / "logs", ec);
   fs::create_directories(docs / "data", ec);
   chdir(docs.c_str());
+  NFSCInstallCrashReporter();
 
   namespace boot = nfsmw::boot;
   boot::Open((docs / "logs" / "boot.txt").string());

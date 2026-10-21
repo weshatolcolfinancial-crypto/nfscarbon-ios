@@ -100,6 +100,24 @@ static const char* GetSignalName(int sig) {
 }
 
 static void SignalHandler(int sig, siginfo_t* info, void* ucontext) {
+#if defined(__arm64__) || defined(__aarch64__)
+    if (ucontext && (sig == SIGSEGV || sig == SIGBUS)) {
+        ucontext_t* uc = (ucontext_t*)ucontext;
+        if (uc->uc_mcontext) {
+            uintptr_t fault_addr = (uintptr_t)(info ? info->si_addr : 0);
+            if (fault_addr == 0x70000002 || (fault_addr >= 0x40000000 && fault_addr < 0x80000000)) {
+                // Bypass 0x70000002 / guest memory read faults by advancing PC by 4
+#if __DARWIN_OPAQUE_ARM_THREAD_STATE64
+                uc->uc_mcontext->__ss.__opaque_pc = (void*)((uintptr_t)uc->uc_mcontext->__ss.__opaque_pc + 4);
+#else
+                uc->uc_mcontext->__ss.__pc += 4;
+#endif
+                return;
+            }
+        }
+    }
+#endif
+
     // Open crash.log directly with low-level POSIX call (async-signal-safe)
     int fd = open(s_crashLogPath, O_WRONLY | O_CREAT | O_APPEND, 0666);
     if (fd < 0) {

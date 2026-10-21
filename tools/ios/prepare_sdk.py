@@ -147,6 +147,8 @@ IOS_PATCHES = [
     "patch_ios_save_hook",
     "patch_ios_sdl_scene",
     "patch_ios_entry_point",
+    "patch_ios_dispatch_ranges",
+    "patch_ios_signal_handler",
 ]
 
 

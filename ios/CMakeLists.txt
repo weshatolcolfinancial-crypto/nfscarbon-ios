@@ -139,7 +139,9 @@ add_executable(nfscarbon MACOSX_BUNDLE
     src/memory_report.mm
     src/gpu_capture.mm
     src/achievements_export.cpp
-    src/audio/coreaudio_driver.mm)
+    src/audio/coreaudio_driver.mm
+    src/CrashReporter.mm
+    src/LoggerBridge.mm)
 
 set_target_properties(nfscarbon PROPERTIES
     OUTPUT_NAME "${NFSCARBON_EXECUTABLE}"
