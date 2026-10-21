@@ -7,6 +7,7 @@
 
 #import "LoggerBridge.h"
 #import <Foundation/Foundation.h>
+#import <objc/message.h>
 #import <os/log.h>
 #include <cstdio>
 #include <cstring>
@@ -62,10 +63,7 @@ void NFSCLogRaw(const char* tag, const char* subsystem, const char* message) {
                 NSString* nsTag = [NSString stringWithUTF8String:tag];
                 NSString* nsSub = [NSString stringWithUTF8String:subsystem];
                 NSString* nsMsg = [NSString stringWithUTF8String:message];
-                #pragma clang diagnostic push
-                #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-                [sharedLogger performSelector:logSel withObject:nsTag withObject:nsSub withObject:nsMsg];
-                #pragma clang diagnostic pop
+                ((void (*)(id, SEL, id, id, id))objc_msgSend)(sharedLogger, logSel, nsTag, nsSub, nsMsg);
                 return;
             }
         }
